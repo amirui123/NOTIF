@@ -70,6 +70,17 @@ public partial class OverlayWindow : Window
                     var root = json.RootElement;
                     if (!root.TryGetProperty("type", out var type)) return;
                     if (type.GetString() == "ready") { _ready = true; SendPower(); _powerTimer.Start(); }
+                    else if (type.GetString() == "readClipboard")
+                    {
+                        string? text = null;
+                        try
+                        {
+                            text = Clipboard.ContainsText() ? Clipboard.GetText() : "No clipboard text";
+                            if (text.Length > 512) text = text[..512] + "…";
+                        }
+                        catch (System.Runtime.InteropServices.ExternalException) { }
+                        core.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "clipboard", text }));
+                    }
                     else if (type.GetString() == "size" && root.TryGetProperty("width", out var w) && root.TryGetProperty("height", out var h) && w.TryGetDouble(out double width) && h.TryGetDouble(out double height) && double.IsFinite(width) && double.IsFinite(height))
                     {
                         Width = Math.Clamp(width, 100, 390); Height = Math.Clamp(height, 30, 340); PositionAtTop();
@@ -92,7 +103,7 @@ public partial class OverlayWindow : Window
                         if (e.IsSuccess)
                         {
                             await System.Threading.Tasks.Task.Delay(1200);
-                            ok = await core.ExecuteScriptAsync("Boolean(document.documentElement.dataset.nativeOverlay === 'true' && document.querySelector('#island .st.on') && getComputedStyle(document.querySelector('#dock')).display === 'none' && typeof textModel === 'function' && batt.pct === 73 && batt.w > 0 && window.__islandErrors.length === 0)") == "true" && Width >= 100 && Height >= 30;
+                            ok = await core.ExecuteScriptAsync("Boolean(document.documentElement.dataset.nativeOverlay === 'true' && document.querySelector('#island .st.on') && getComputedStyle(document.querySelector('#dock')).display === 'none' && ['#a-pal','#a-shot','#a-dnd','#l-save'].every(s => getComputedStyle(document.querySelector(s)).display === 'none') && typeof textModel === 'function' && batt.pct === 73 && batt.w > 0 && window.__islandErrors.length === 0)") == "true" && Width >= 100 && Height >= 30;
                         }
                     }
                     catch (Exception) { }
@@ -113,12 +124,12 @@ public partial class OverlayWindow : Window
         if (!_ready || View.CoreWebView2 == null) return;
         if (_smokeTest)
         {
-            View.CoreWebView2.PostWebMessageAsJson("{\"type\":\"power\",\"percent\":73,\"plugged\":true}");
+            View.CoreWebView2.PostWebMessageAsJson("{\"type\":\"power\",\"available\":true,\"percent\":73,\"plugged\":true}");
             return;
         }
         var power = Forms.SystemInformation.PowerStatus;
-        if (power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery) || power.BatteryLifePercent < 0) return;
-        View.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "power", percent = power.BatteryLifePercent * 100, plugged = power.PowerLineStatus == Forms.PowerLineStatus.Online }));
+        bool available = !power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery) && power.BatteryLifePercent >= 0;
+        View.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "power", available, percent = available ? power.BatteryLifePercent * 100 : 0, plugged = power.PowerLineStatus == Forms.PowerLineStatus.Online }));
     }
 
     public void ShowIsland() { PositionAtTop(); Show(); }
