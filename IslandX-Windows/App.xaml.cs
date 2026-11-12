@@ -29,7 +29,6 @@ public partial class App : Application
         catch (Exception ex)
         {
             try { System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IslandX-startup-error.txt"), ex.ToString()); } catch (Exception) { }
-            MessageBox.Show("IslandX could not start. Please report this error: " + ex.Message, "IslandX", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1); return;
         }
         MainWindow = _overlay;
