@@ -7,7 +7,7 @@ on:
       - '.github/workflows/windows-build.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: windows-latest
@@ -49,3 +49,25 @@ jobs:
           path: out/IslandX-Windows/
           if-no-files-found: error
           retention-days: 7
+      - name: Publish clearly labelled preview release
+        if: startsWith(github.event.head_commit.message, 'Publish preview')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Copy-Item IslandX-Windows/README.md out/IslandX-Windows/README.md
+          Compress-Archive -Path out/IslandX-Windows/* -DestinationPath out/IslandX-preview-win-x64.zip
+          $notes = @'
+          **Experimental preview — not a finished Windows island or installer.**
+
+          The first window runs the original IslandX HTML prototype offline, including its existing appearance, animations and trained models. The prototype's notifications, music, battery and other system controls are simulated, not connected to Windows. A separate experimental native status panel can read the clock, battery and clipboard on demand and offers opt-in sign-in startup.
+
+          **Requirements:** Windows x64 and Microsoft Edge WebView2 Runtime. The .NET runtime is bundled. This unsigned portable build may trigger SmartScreen. No installation or uninstaller is included.
+
+          Download the ZIP, extract all files to a permanent folder and run IslandX.Windows.exe. Use the tray icon to reopen the preview or exit. Startup is off unless explicitly enabled in the separate native panel; disable it there before moving or deleting the files.
+
+          Windows notification integration, a desktop overlay, persistent clipboard history, media integration, installer, signing, and full interactive/security/real-device testing are not complete. Do not use sensitive clipboard data in this preview. UI and behaviour may change substantially.
+          '@
+          $notes | Set-Content -Encoding utf8 out/release-notes.txt
+          gh release create v0.1.0-preview out/IslandX-preview-win-x64.zip --target $env:GITHUB_SHA --title "IslandX 0.1.0 — experimental preview" --notes-file out/release-notes.txt --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Could not publish preview release' }
