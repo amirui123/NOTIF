@@ -103,7 +103,7 @@ jobs:
           $notes = @'
           **Experimental preview — not a finished product.**
 
-          The app starts an experimental topmost desktop island based on the original prototype. The Windows clock and battery percentage/plugged-in state are connected; charger wattage is not available. The tray menu opens the full demo and an early native panel. Notifications, media, fullscreen detection, and clipboard history are not integrated. The separately downloadable HTML file is the original standalone demo, with simulated system events.
+          The app starts an experimental topmost desktop island based on the original prototype. The Windows clock and battery percentage/plugged-in state are connected; charger wattage is not available. Hover over the island and select Clipboard to read clipboard text on demand; it is not stored. Simulated screenshot, command and system Do Not Disturb controls are hidden from the desktop overlay. The tray menu opens the full demo and an early native panel. Notifications, media, fullscreen detection, and clipboard history are not integrated. The separately downloadable HTML file is the original standalone demo, with simulated system events.
 
           **Requirements:** Windows 10 version 2004 or newer, x64, and Microsoft Edge WebView2 Runtime. The .NET runtime is bundled. The unsigned installer and app may trigger SmartScreen.
 
@@ -112,5 +112,5 @@ jobs:
           Real-device visual, input, battery, startup, and security testing remain incomplete. Do not rely on this preview for important notifications or sensitive clipboard data. UI and behaviour may change substantially.
           '@
           $notes | Set-Content -Encoding utf8 out/release-notes.txt
-          gh release create v0.3.0-preview out/IslandX-Setup-preview-win-x64.exe out/IslandX-preview-win-x64.zip out/IslandX-demo.html --target $env:GITHUB_SHA --title "IslandX 0.3.0 — experimental installer" --notes-file out/release-notes.txt --prerelease
+          gh release create v0.4.0-preview out/IslandX-Setup-preview-win-x64.exe out/IslandX-preview-win-x64.zip out/IslandX-demo.html --target $env:GITHUB_SHA --title "IslandX 0.4.0 — experimental desktop preview" --notes-file out/release-notes.txt --prerelease
           if ($LASTEXITCODE -ne 0) { throw 'Could not publish preview release' }

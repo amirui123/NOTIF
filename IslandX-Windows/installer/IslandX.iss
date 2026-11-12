@@ -1,4 +1,4 @@
-#define AppVersion "0.3.0"
+#define AppVersion "0.4.0"
 [Setup]
 AppId={{04A8C797-0DD7-4E71-9046-4EAC5BF33F3F}
 AppName=IslandX (experimental preview)

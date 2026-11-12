@@ -19,7 +19,7 @@
     const clipboard = document.createElement('div');
     clipboard.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:8px;min-width:0';
     const read = document.createElement('button');
-    read.type='button'; read.textContent='Clipboard'; read.title='Read clipboard text once';
+    read.id='native-clipboard'; read.type='button'; read.textContent='Clipboard'; read.title='Read clipboard text once';
     read.className='chip';
     const value = document.createElement('span');
     value.className='xs t2 ell'; value.style.cssText='flex:1;min-width:0';
@@ -56,7 +56,8 @@
       }
       if (!data || data.type !== 'power') return;
       if (!data.available || !Number.isFinite(data.percent)) { lastPower = null; return; }
-      const pct = Math.max(0,Math.min(100,Math.round(data.percent))), plugged = data.plugged === true;
+      if (typeof data.plugged !== 'boolean') { lastPower = null; return; }
+      const pct = Math.max(0,Math.min(100,Math.round(data.percent))), plugged = data.plugged;
       if (lastPower && lastPower.percent === pct && lastPower.plugged === plugged) return;
       batt.pct = pct;
       /* 1 is a boolean sentinel: Windows' power status API does not report charger wattage. */

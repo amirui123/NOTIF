@@ -103,7 +103,7 @@ public partial class OverlayWindow : Window
                         if (e.IsSuccess)
                         {
                             await System.Threading.Tasks.Task.Delay(1200);
-                            ok = await core.ExecuteScriptAsync("Boolean(document.documentElement.dataset.nativeOverlay === 'true' && document.querySelector('#island .st.on') && getComputedStyle(document.querySelector('#dock')).display === 'none' && ['#a-pal','#a-shot','#a-dnd','#l-save'].every(s => getComputedStyle(document.querySelector(s)).display === 'none') && typeof textModel === 'function' && batt.pct === 73 && batt.w > 0 && window.__islandErrors.length === 0)") == "true" && Width >= 100 && Height >= 30;
+                            ok = await core.ExecuteScriptAsync("Boolean(document.documentElement.dataset.nativeOverlay === 'true' && document.querySelector('#island .st.on') && getComputedStyle(document.querySelector('#dock')).display === 'none' && document.querySelector('#native-clipboard') && ['#a-pal','#a-shot','#a-dnd','#l-save'].every(s => getComputedStyle(document.querySelector(s)).display === 'none') && typeof textModel === 'function' && batt.pct === 73 && batt.w > 0 && window.__islandErrors.length === 0)") == "true" && Width >= 100 && Height >= 30;
                         }
                     }
                     catch (Exception) { }
@@ -129,7 +129,8 @@ public partial class OverlayWindow : Window
         }
         var power = Forms.SystemInformation.PowerStatus;
         bool available = !power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery) && power.BatteryLifePercent >= 0;
-        View.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "power", available, percent = available ? power.BatteryLifePercent * 100 : 0, plugged = power.PowerLineStatus == Forms.PowerLineStatus.Online }));
+        bool? plugged = power.PowerLineStatus == Forms.PowerLineStatus.Unknown ? null : power.PowerLineStatus == Forms.PowerLineStatus.Online;
+        View.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "power", available, percent = available ? power.BatteryLifePercent * 100 : 0, plugged }));
     }
 
     public void ShowIsland() { PositionAtTop(); Show(); }
