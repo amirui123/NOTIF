@@ -27,7 +27,12 @@ python3 -m http.server 8080 --bind 0.0.0.0
 text_model.py → sim.py → behavior.py → stage2.py → policy.py → export_js.py → node checks.js
 ```
 
+## مراجع
+
+`reference/qwen-prototype.html` — نمونه‌ی مقایسه‌ای (تولیدشده با Qwen). تحلیل: [`docs/COMPARE-qwen.md`](docs/COMPARE-qwen.md)
+
 ## مستندات
 
 - [`docs/PROJECT-MAP.md`](docs/PROJECT-MAP.md) — نقشه‌ی کامل فایل‌ها و کارکردشان
 - [`docs/PLAN.md`](docs/PLAN.md) — برنامه‌ی کار و کارهای باقی‌مانده
+- [`docs/COMPARE-qwen.md`](docs/COMPARE-qwen.md) — مقایسه با نمونه‌ی Qwen و برنامه‌ی الحاق قابلیت‌ها

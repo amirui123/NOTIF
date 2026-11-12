@@ -18,3 +18,19 @@
 ```bash
 node IslandX-Model/test_engine_text.js     # 7/9 — هدف: 9/9
 ```
+
+## برنامه‌ی الحاق از نسخه‌ی Qwen (جزئیات در `docs/COMPARE-qwen.md`)
+### موج ۱
+- [ ] صدای واقعی (Web Audio + AnalyserNode برای ویژوالایزر)
+- [ ] ماشین حالت با اولویت + صف + بازگردانی (`PRI` / `restoreStack` / `evQueue`)
+- [ ] پنل شفافیت مدل با اعداد واقعی (تب‌های affinity / habituation / decisions / telemetry)
+- [ ] لایه‌ی سیاست: `interrupt = p × (1 − load × shield)` + refractory
+### موج ۲
+- [ ] Settings + قواعد per-app + ذخیره‌سازی
+- [ ] Command palette (Ctrl+Alt+Space)
+- [ ] State gallery (Ctrl+Shift+G)
+- [ ] History با فیلتر/جستجو/undo
+### موج ۳
+- [ ] Chat / Quick reply کامل
+- [ ] Cinema mode
+- [ ] Screenshot + ادیتور
