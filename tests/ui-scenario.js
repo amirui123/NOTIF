@@ -154,6 +154,24 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   w.notify({app:'Messages',from:'<img src=x onerror=alert(1)>',body:'<img src=x onerror=alert(1)>',c:'#fff'});w.renderPeek();
   ok('grouped notifications escape external text',!d.querySelector('#list img')&&d.querySelector('#list').textContent.includes('<img'));
 
+  // Full-screen ambient indicators reflect concurrent activity, and go away with it.
+  click('#b-ctx button[data-k=fs]');await wait(200);
+  btn('#b-sys button',/65 W/).dispatchEvent(new w.MouseEvent('click',{bubbles:true}));await wait(100);
+  const fsStatus=d.querySelector('#fs-status');
+  ok('fullscreen charging indicator',state()==='line'&&!!fsStatus.querySelector('[data-status=charge]')&&fsStatus.getAttribute('aria-hidden')==='false',state());
+  click('#b-ctx button[data-k=music]');click('#b-ctx button[data-k=timer]');await wait(100);
+  ok('fullscreen simultaneous states',!!fsStatus.querySelector('[data-status=charge]')&&!!fsStatus.querySelector('[data-status=music]')&&!!fsStatus.querySelector('[data-status=timer]'));
+  w.setPlay(false);ok('fullscreen music paused',!!fsStatus.querySelector('.music.paused'));
+  btn('#b-sys button',/Unplug/).dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  ok('fullscreen unplug removes charging',!fsStatus.querySelector('[data-status=charge]'));
+  btn('#b-sys button',/Slow charger/).dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  ok('fullscreen slow charging has its own state',!!fsStatus.querySelector('.charge.slow'));
+  btn('#b-sys button',/Unplug/).dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  ok('fullscreen low battery indicator',!!fsStatus.querySelector('[data-status=low]'));
+  click('#b-ctx button[data-k=dnd]');ok('fullscreen quiet mode indicator',!!fsStatus.querySelector('[data-status=dnd]'));click('#b-ctx button[data-k=dnd]');
+  click('#b-ctx button[data-k=timer]');click('#b-ctx button[data-k=music]');click('#b-ctx button[data-k=fs]');
+  ok('fullscreen indicators hidden after exit',fsStatus.getAttribute('aria-hidden')==='true');
+
   // persistence
   const ls={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);ls[k]=1}
   ok('persists small state',Object.keys(ls).length>0,Object.keys(ls).join(','));

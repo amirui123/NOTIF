@@ -760,6 +760,27 @@ body:not(.playing) #s-musicx .art{filter:saturate(.5) brightness(.75)}
 .pit{display:flex;align-items:center;gap:8px;height:30px;padding:0 8px;border-radius:9px;cursor:pointer;font-size:12px;color:var(--t2);transition:background .15s}
 .pit b{color:var(--t1);white-space:nowrap}.pit svg.i{width:14px;height:14px}
 .pit.sel,.pit:hover{background:rgba(255,255,255,.06)}.pit.sel svg.i{color:var(--vl)}
+
+/* Full-screen ambient status: a quiet, non-interactive constellation under the line. */
+#fs-status{position:absolute;top:13px;left:50%;transform:translate(-50%,-3px);display:flex;align-items:center;gap:4px;padding:2px 5px;border-radius:10px;background:rgba(10,10,16,.83);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),0 3px 12px rgba(0,0,0,.3);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s,transform .3s,visibility .25s}
+#wrap.line #fs-status.has-status{opacity:1;visibility:visible;transform:translate(-50%,0)}
+#fs-status .fs-ind{position:relative;display:grid;place-items:center;width:12px;height:12px;color:var(--status-color);flex:none}
+#fs-status .fs-ind svg.i{width:11px;height:11px;filter:drop-shadow(0 0 3px currentColor)}
+#fs-status .charge{--status-color:#6ee7b7}#fs-status .charge.slow{--status-color:#fcd34d}
+#fs-status .charge:not(.full) svg{animation:fs-charge 2.4s ease-in-out infinite}
+#fs-status .charge.slow:not(.full) svg{animation-duration:4s}
+#fs-status .low{--status-color:#f87171}#fs-status .low svg{animation:fs-alert 3s ease-in-out infinite}
+#fs-status .music{--status-color:#c4b5fd}#fs-status .music:not(.paused) svg{animation:fs-music 2s ease-in-out infinite}
+#fs-status .timer{--status-color:#fbbf24}#fs-status .timer:not(.paused)::after{content:"";position:absolute;inset:0;border:1px solid currentColor;border-left-color:transparent;border-radius:50%;opacity:.6;animation:fs-orbit 5s linear infinite}
+#fs-status .paused{opacity:.55}#fs-status .meet{--status-color:#fb7185}#fs-status .privacy{--status-color:#4ade80}
+#fs-status .meet::after,#fs-status .privacy::after{content:"";position:absolute;right:0;top:0;width:3px;height:3px;border-radius:50%;background:currentColor;animation:fs-live 3s ease-in-out infinite}
+#fs-status .dnd{--status-color:#a5b4fc}#fs-status .unread{--status-color:#c4b5fd}
+@keyframes fs-charge{0%,100%{opacity:.7;transform:scale(.9)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes fs-alert{0%,100%{opacity:.7}15%,30%{opacity:1}22%{opacity:.55}}
+@keyframes fs-music{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+@keyframes fs-orbit{to{transform:rotate(360deg)}}
+@keyframes fs-live{50%{opacity:.45;transform:scale(.75)}}
+@media (prefers-reduced-motion:reduce){#fs-status,#fs-status * ,#fs-status *::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -1693,7 +1714,29 @@ function fsNavDraw(){const T=fsTabs(),on=ctx.fs&&expanded&&T.length>1&&T.some(t=
   if(on)fsnav.innerHTML=T.map(([id,ic,k])=>`<span data-t="${id}" class="${id===cur?'on':''}">${ico(ic)}${id==='peek'?(unread.length?unread.length:''):`<i style="--k:${k}"></i>`}</span>`).join('');
   fsnav.classList.toggle('on',on);wrap.classList.toggle('nav',on)}
 fsnav.addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;e.stopPropagation();touched=true;fsLast=b.dataset.t;if(fsLast==='peek')renderPeek();show(fsLast)});
-{const _show=show;show=function(id){_show(id);fsNavDraw()}}
+/* Keep all active states visible together; this never intercepts hover or clicks. */
+wrap.insertAdjacentHTML('beforeend','<div id="fs-status" role="status" aria-label="Full-screen status" aria-hidden="true"></div>');
+const fsStatus=$('#fs-status');let fsStatusKey='';
+function drawFsStatus(){
+  const items=[];
+  if(batt.w)items.push(['charge'+(batt.w<30?' slow':'')+(batt.pct>=100?' full':''),'bolt',batt.pct>=100?'Battery full, plugged in':(batt.w<30?'Slow charging':'Charging')]);
+  else if(batt.pct<=15)items.push(['low','warn','Low battery']);
+  if(ctx.meet)items.push(['meet','video','Meeting active']);
+  else if(ctx.priv)items.push(['privacy','mic','Camera or microphone in use']);
+  if(ctx.music)items.push(['music'+(!mplay?' paused':''),'note',mplay?'Music playing':'Music paused']);
+  if(ctx.timer)items.push(['timer'+(!PO.run?' paused':''),'timer',PO.run?'Timer running':'Timer paused']);
+  if(ctx.dnd)items.push(['dnd','moon','Do not disturb']);
+  if(unread.length)items.push(['unread','bell',unread.length+' unread notifications']);
+  const key=JSON.stringify(items);
+  if(key!==fsStatusKey){fsStatusKey=key;fsStatus.innerHTML=items.map(([kind,icon,label])=>`<span class="fs-ind ${kind}" data-status="${kind.split(' ')[0]}" title="${label}" aria-hidden="true">${ico(icon)}</span>`).join('');fsStatus.classList.toggle('has-status',items.length>0);fsStatus.setAttribute('aria-label',items.length?'Full-screen status: '+items.map(i=>i[2]).join(', '):'No active status')}
+  fsStatus.setAttribute('aria-hidden',String(!(ctx.fs&&cur==='line'&&items.length)));
+}
+{const _show=show;show=function(id){_show(id);fsNavDraw();drawFsStatus()}}
+{const f=renderBatt;renderBatt=function(){const r=f();drawFsStatus();return r}}
+{const f=renderIdle;renderIdle=function(){f();drawFsStatus()}}
+{const f=setPlay;setPlay=function(v){f(v);drawFsStatus()}}
+{const f=pdraw;pdraw=function(){f();drawFsStatus()}}
+drawFsStatus();
 addEventListener('resize',()=>show(cur));
 </script>
 </body>
