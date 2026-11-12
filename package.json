@@ -1,0 +1,14 @@
+{
+  "name": "islandx",
+  "private": true,
+  "description": "IslandX — Dynamic-Island-style notification hub (prototype + attention model)",
+  "scripts": {
+    "serve": "python3 -m http.server 8080 --bind 0.0.0.0 --directory IslandX-Prototype",
+    "test": "node IslandX-Model/test_engine.js",
+    "test:ui": "node tests/ui-scenario.js",
+    "test:eval": "node IslandX-Model/eval_engine.js"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.0"
+  }
+}
