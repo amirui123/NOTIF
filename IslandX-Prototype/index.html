@@ -781,6 +781,10 @@ body:not(.playing) #s-musicx .art{filter:saturate(.5) brightness(.75)}
 @keyframes fs-orbit{to{transform:rotate(360deg)}}
 @keyframes fs-live{50%{opacity:.45;transform:scale(.75)}}
 @media (prefers-reduced-motion:reduce){#fs-status,#fs-status * ,#fs-status *::after{animation:none!important;transition:none!important}}
+/* Shared-element flight is temporary and never changes the original controls. */
+.shared-moving{visibility:hidden!important}
+.shared-flight{position:fixed!important;z-index:9999;pointer-events:none!important;margin:0!important;animation:none!important;transition:none!important;transform-origin:0 0!important}
+@media (prefers-reduced-motion:reduce){.shared-flight{display:none!important}}
 </style>
 </head>
 <body>
@@ -1737,7 +1741,42 @@ function drawFsStatus(){
 {const f=setPlay;setPlay=function(v){f(v);drawFsStatus()}}
 {const f=pdraw;pdraw=function(){f();drawFsStatus()}}
 drawFsStatus();
-addEventListener('resize',()=>show(cur));
+/* Only related states share an element. Measure in viewport coordinates and keep following
+   the spring-driven destination; a new state change cancels the previous flight cleanly. */
+const sharedPairs=[
+  [['music','musicx'],['#s-music .art','#s-musicx .art']],
+  [['dual','musicx'],['#s-dual .art','#s-musicx .art']],
+  [['toast','reply'],['#t-av','#r-av']],
+  [['timerc','timerx'],['#s-timerc .pring','#s-timerx .pring']],
+  [['dual','timerx'],['#s-dual .pring','#s-timerx .pring']]
+];
+let sharedFlight=null;
+function endSharedFlight(){if(!sharedFlight)return;cancelAnimationFrame(sharedFlight.raf);sharedFlight.src.classList.remove('shared-moving');sharedFlight.dst.classList.remove('shared-moving');sharedFlight.ghost.remove();sharedFlight=null}
+function prepareShared(from,to){
+  if(REDUCED)return null;
+  const pair=sharedPairs.find(([states])=>states.includes(from)&&states.includes(to));if(!pair)return null;
+  const i=pair[0].indexOf(from),src=$(pair[1][i]),dst=$(pair[1][1-i]);if(!src||!dst)return null;
+  const a=src.getBoundingClientRect();if(!a.width||!a.height)return null;
+  const ghost=src.cloneNode(true);ghost.removeAttribute('id');ghost.classList.remove('shared-moving','swap');ghost.classList.add('shared-flight');ghost.setAttribute('aria-hidden','true');
+  const st=getComputedStyle(src);for(const key of ['background','border','border-radius','box-shadow','color','font','line-height','text-align'])ghost.style.setProperty(key,st.getPropertyValue(key));
+  for(const key of ['--tc','--tc2','--tc3','--ph'])ghost.style.setProperty(key,getComputedStyle(island).getPropertyValue(key));
+  Object.assign(ghost.style,{left:'0px',top:'0px',width:a.width+'px',height:a.height+'px'});document.body.appendChild(ghost);
+  src.classList.add('shared-moving');dst.classList.add('shared-moving');
+  return {src,dst,ghost,a,raf:0};
+}
+function runShared(f){
+  sharedFlight=f;const start=performance.now(),duration=400;
+  function step(now){if(sharedFlight!==f)return;const b=f.dst.getBoundingClientRect();if(!b.width||!b.height){endSharedFlight();return}
+    const t=Math.min(1,(now-start)/duration),e=1-Math.pow(1-t,3);
+    const x=f.a.left+(b.left-f.a.left)*e,y=f.a.top+(b.top-f.a.top)*e;
+    const sx=1+(b.width/f.a.width-1)*e,sy=1+(b.height/f.a.height-1)*e;
+    f.ghost.style.setProperty('transform',`translate(${x}px,${y}px) scale(${sx},${sy})`,'important');
+    if(t<1)f.raf=requestAnimationFrame(step);else endSharedFlight();
+  }
+  f.ghost.style.setProperty('transform',`translate(${f.a.left}px,${f.a.top}px)`,'important');f.raf=requestAnimationFrame(step);
+}
+{const f=show;show=function(id){if(id===cur){f(id);return}endSharedFlight();const flight=prepareShared(cur,id);f(id);if(flight)runShared(flight)}}
+addEventListener('resize',()=>{endSharedFlight();show(cur)});
 </script>
 </body>
 </html>

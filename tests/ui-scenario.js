@@ -172,6 +172,16 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   click('#b-ctx button[data-k=timer]');click('#b-ctx button[data-k=music]');click('#b-ctx button[data-k=fs]');
   ok('fullscreen indicators hidden after exit',fsStatus.getAttribute('aria-hidden')==='true');
 
+  // Simulated geometry exercises shared-flight lifecycle; jsdom has no real layout.
+  const rect=w.Element.prototype.getBoundingClientRect;
+  w.Element.prototype.getBoundingClientRect=function(){return {left:100,top:10,width:24,height:24,right:124,bottom:34}};
+  w.show('music');w.show('musicx');
+  ok('shared artwork flight starts',!!d.querySelector('.shared-flight')&&d.querySelector('#s-musicx .art').classList.contains('shared-moving'));
+  w.show('idle');ok('shared flight interrupted cleanly',!d.querySelector('.shared-flight')&&!d.querySelector('.shared-moving'));
+  w.show('timerc');w.show('timerx');await wait(500);
+  ok('shared timer flight completes',!d.querySelector('.shared-flight')&&!d.querySelector('.shared-moving'));
+  w.Element.prototype.getBoundingClientRect=rect;w.settle();
+
   // persistence
   const ls={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);ls[k]=1}
   ok('persists small state',Object.keys(ls).length>0,Object.keys(ls).join(','));
