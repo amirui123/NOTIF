@@ -781,6 +781,10 @@ body:not(.playing) #s-musicx .art{filter:saturate(.5) brightness(.75)}
 @keyframes fs-orbit{to{transform:rotate(360deg)}}
 @keyframes fs-live{50%{opacity:.45;transform:scale(.75)}}
 @media (prefers-reduced-motion:reduce){#fs-status,#fs-status * ,#fs-status *::after{animation:none!important;transition:none!important}}
+/* Direction belongs only to explicit full-screen tab changes. */
+#island .st.fs-slide{animation:fs-slide-in .32s cubic-bezier(.16,1,.3,1) both}
+@keyframes fs-slide-in{from{opacity:0;transform:translateX(calc(-50% + var(--fs-offset,0px))) scale(.98)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+@media (prefers-reduced-motion:reduce){#island .st.fs-slide{animation:none!important}}
 /* Shared-element flight is temporary and never changes the original controls. */
 .shared-moving{visibility:hidden!important}
 .shared-flight{position:fixed!important;z-index:9999;pointer-events:none!important;margin:0!important;animation:none!important;transition:none!important;transform-origin:0 0!important}
@@ -1717,7 +1721,13 @@ function fsPick(){const T=fsTabs().map(t=>t[0]);return T.includes(fsLast)?fsLast
 function fsNavDraw(){const T=fsTabs(),on=ctx.fs&&expanded&&T.length>1&&T.some(t=>t[0]===cur);
   if(on)fsnav.innerHTML=T.map(([id,ic,k])=>`<span data-t="${id}" class="${id===cur?'on':''}">${ico(ic)}${id==='peek'?(unread.length?unread.length:''):`<i style="--k:${k}"></i>`}</span>`).join('');
   fsnav.classList.toggle('on',on);wrap.classList.toggle('nav',on)}
-fsnav.addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;e.stopPropagation();touched=true;fsLast=b.dataset.t;if(fsLast==='peek')renderPeek();show(fsLast)});
+let fsSlideTimer=0;
+fsnav.addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;e.stopPropagation();touched=true;
+  const tabs=fsTabs().map(t=>t[0]),from=tabs.indexOf(cur),to=tabs.indexOf(b.dataset.t);
+  clearTimeout(fsSlideTimer);$$('.st.fs-slide').forEach(el=>el.classList.remove('fs-slide'));
+  fsLast=b.dataset.t;if(fsLast==='peek')renderPeek();show(fsLast);
+  if(!REDUCED&&from>=0&&to>=0&&from!==to){const panel=$('#s-'+fsLast);panel.style.setProperty('--fs-offset',to>from?'14px':'-14px');void panel.offsetWidth;panel.classList.add('fs-slide');fsSlideTimer=setTimeout(()=>panel.classList.remove('fs-slide'),340)}
+});
 /* Keep all active states visible together; this never intercepts hover or clicks. */
 wrap.insertAdjacentHTML('beforeend','<div id="fs-status" role="status" aria-label="Full-screen status" aria-hidden="true"></div>');
 const fsStatus=$('#fs-status');let fsStatusKey='';

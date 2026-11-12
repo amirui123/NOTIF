@@ -182,6 +182,15 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   ok('shared timer flight completes',!d.querySelector('.shared-flight')&&!d.querySelector('.shared-moving'));
   w.Element.prototype.getBoundingClientRect=rect;w.settle();
 
+  // Full-screen tab direction follows the destination's position.
+  click('#b-ctx button[data-k=music]');click('#b-ctx button[data-k=timer]');click('#b-ctx button[data-k=fs]');
+  w.eval('expanded=true');w.show('musicx');
+  click('#fsnav [data-t=timerx]');
+  ok('fullscreen tab moves from right',d.querySelector('#s-timerx').style.getPropertyValue('--fs-offset')==='14px'&&d.querySelector('#s-timerx').classList.contains('fs-slide'));
+  click('#fsnav [data-t=musicx]');
+  ok('fullscreen tab moves from left',d.querySelector('#s-musicx').style.getPropertyValue('--fs-offset')==='-14px'&&d.querySelector('#s-musicx').classList.contains('fs-slide'));
+  w.settle();click('#b-ctx button[data-k=timer]');click('#b-ctx button[data-k=music]');click('#b-ctx button[data-k=fs]');
+
   // persistence
   const ls={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);ls[k]=1}
   ok('persists small state',Object.keys(ls).length>0,Object.keys(ls).join(','));
