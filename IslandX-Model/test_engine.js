@@ -81,6 +81,14 @@ const POLICY = [
   { id: 'do not disturb', n: msg({ body: 'برنده جایزه شدید! کد ملی بفرستید' }), p: .9, C: { ...C, dnd: true }, expect: 'silent' },
 ];
 
+// Inherited object names used to collide with the text cache and return functions instead of predictions.
+for (const text of ['constructor', '__proto__', 'toString']) {
+  const result=textModel(text);
+  if (!Number.isFinite(result.pu) || result.pt.length!==4 || !result.pt.every(Number.isFinite)) {
+    console.error('Invalid text model result for '+text); fail++;
+  }
+}
+
 console.log('\nPOLICY' + ' '.repeat(23) + 'text class     scam score    expected    verdict');
 console.log('-'.repeat(72));
 for (const c of POLICY) {

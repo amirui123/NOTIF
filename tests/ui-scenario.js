@@ -87,6 +87,7 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   // reset
   click('#reset'); await wait(150);
   ok('reset clears learning',/reset/i.test(log()));
+  ok('fullscreen default dwell after reset',w.eval('dwell')===420);
 
   // ---- system OSDs each have their own language ----
   await wait(1200);
@@ -159,6 +160,8 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   click('#b-ctx button[data-k=priv]');await wait(2700);
   w.notify({app:'Messages',from:'<img src=x onerror=alert(1)>',body:'<img src=x onerror=alert(1)>',c:'#fff'});w.renderPeek();
   ok('grouped notifications escape external text',!d.querySelector('#list img')&&d.querySelector('#list').textContent.includes('<img'));
+  const hostile=[...d.querySelectorAll('#list .it')].find(e=>e.textContent.includes('<img'));if(hostile)hostile.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  ok('learning log escapes sender',!d.querySelector('#log img')&&d.querySelector('#log').textContent.includes('<img'));
 
   // Full-screen ambient indicators reflect concurrent activity, and go away with it.
   click('#b-ctx button[data-k=fs]');await wait(200);
@@ -224,6 +227,13 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   ok('quiet mode suppresses sound',w.__tones.length===tones);
   click('#b-ctx button[data-k=dnd]');click('#a-sound');tones=w.__tones.length;w.soundCue('message');
   ok('sound off suppresses sound',w.__tones.length===tones&&d.querySelector('#a-sound').getAttribute('aria-pressed')==='false');
+
+  // Untrusted text should never collide with object prototype keys or receive unsafe reply chips.
+  w.notify({app:'Messages',from:'Sender',body:'constructor',c:'#fff'});
+  ok('prototype-name message is handled',errors.length===0);
+  ok('no suggestions for login codes',w.smartReplies({body:'Your code is 482913',otp:'482913'}).length===0);
+  ok('no suggestions for suspected scam',w.smartReplies({body:'برنده جایزه شدید! کد ملی و شماره کارت خود را ارسال کنید'}).length===0);
+  ok('calculator rejects excessive input',!w.palParse('1+'.repeat(100)+'1').some(x=>x.i==='calc'));
 
   // persistence
   const ls={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);ls[k]=1}

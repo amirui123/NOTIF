@@ -1039,8 +1039,8 @@ document.addEventListener('scroll',e=>{const t=e.target;if(t&&t.nodeType===1&&t.
    Full-screen: the cursor must REST on the line. Passing through, moving fast or dragging
    never opens it. The required rest time adapts: accidental opens make it longer,
    deliberate use makes it shorter. */
-let dwell=450, openedAt=0, touched=false, fromLine=false, lm=null;
-try{dwell=+localStorage.getItem('islandx-dwell')||450}catch(e){}
+let dwell=420, openedAt=0, touched=false, fromLine=false, lm=null;
+try{dwell=+localStorage.getItem('islandx-dwell')||420}catch(e){}
 function cancelIntent(){clearTimeout(tHover);island.classList.remove('dwell')}
 function startIntent(){
   cancelIntent();
@@ -1098,7 +1098,7 @@ function palParse(q){
   if(m=q.match(/^(?:timer|focus)\s+(\d{1,3})\s*m?(?:in)?$/)){const n=Math.max(1,Math.min(180,+m[1]));out.push({n:`Focus for ${n} min`,d:'Pomodoro · one session at this length',i:'timer',run:()=>{if(!ctx.timer)toggle('timer');PO.L=n;setPhase('focus',n);prefresh()}})}
   if(m=q.match(/^vol(?:ume)?\s+(\d{1,3})$/)){const n=Math.min(100,+m[1]);out.push({n:`Set volume to ${n}`,d:'System audio',i:'speaker',run:()=>{setSl($('[data-sl=vol]'),n);transient('vol',1800)}})}
   if(m=q.match(/^bri(?:ghtness)?\s+(\d{1,3})$/)){const n=Math.min(100,+m[1]);out.push({n:`Set brightness to ${n}`,d:'Display',i:'sun',run:()=>{setSl($('[data-sl=bri]'),n);transient('bri',1800)}})}
-  if(/^[\d\s+\-*/().%]+$/.test(q)&&/[+\-*/%]/.test(q)&&/\d/.test(q)){try{const r=Function('"use strict";return('+q+')')();if(Number.isFinite(r)){const t=String(Math.round(r*1e6)/1e6);out.push({n:`${q} = ${t}`,d:'Enter copies the result',i:'calc',run:()=>{copyText(t).then(ok=>log(`Calculator: <b>${t}</b> ${ok?'copied':'— clipboard unavailable'}`))}})}}catch(e){}}
+  if(q.length<=128&&/^[\d\s+\-*/().%]+$/.test(q)&&/[+\-*/%]/.test(q)&&/\d/.test(q)){try{const r=Function('"use strict";return('+q+')')();if(Number.isFinite(r)){const t=String(Math.round(r*1e6)/1e6);out.push({n:`${q} = ${t}`,d:'Enter copies the result',i:'calc',run:()=>{copyText(t).then(ok=>log(`Calculator: <b>${t}</b> ${ok?'copied':'— clipboard unavailable'}`))}})}}catch(e){}}
   for(const c of CMDS){if(c.when&&!c.when())continue;const name=v(c.n);if(!q||(c.k+' '+name.toLowerCase()).includes(q))out.push({n:name,d:v(c.d),i:c.i,run:c.run})}
   return out.slice(0,4);
 }
@@ -1147,10 +1147,11 @@ function normalizeText(t){
 const normalizeDigits=t=>t.replace(/[۰-۹٠-٩]/g,c=>FA_TO[FA_FROM.indexOf(c)]);
 const ENC=new TextEncoder();
 function fnv1a(s){let h=0x811C9DC5;for(const b of ENC.encode(s))h=Math.imul(h^b,0x01000193)>>>0;return h}
-const textCache={}, TYPES=['personal','transactional','promotional','scam'];
+const textCache=new Map(), TYPES=['personal','transactional','promotional','scam'];
 function textModel(raw){                       /* -> {pu: P(unwanted), pt: [personal, transactional, promotional, scam]} */
-  if(raw in textCache)return textCache[raw];
-  const t=' '+normalizeText(raw)+' ', cnt=new Map(), add=s=>{const k=fnv1a(s)%8192;cnt.set(k,(cnt.get(k)||0)+1)};
+  const normalized=normalizeText(raw);
+  if(textCache.has(normalized))return textCache.get(normalized);
+  const t=' '+normalized+' ', cnt=new Map(), add=s=>{const k=fnv1a(s)%8192;cnt.set(k,(cnt.get(k)||0)+1)};
   for(const n of [2,3,4])for(let i=0;i+n<=t.length;i++)add(t.slice(i,i+n));
   t.split(' ').filter(Boolean).forEach(w=>add('w:'+w));
   let tot=0;cnt.forEach(c=>tot+=Math.sqrt(c));
@@ -1159,7 +1160,9 @@ function textModel(raw){                       /* -> {pu: P(unwanted), pt: [pers
   for(let j=0;j<D;j++)a[j]+=TX.be[j];
   const h=relu(dense(a,TX.W1,TX.b1,H));let zu=TX.bu[0];for(let j=0;j<H;j++)zu+=h[j]*TX.Wu[j];
   const zt=dense(h,TX.Wt,TX.bt,4),mx=Math.max(...zt),ex=Array.from(zt,v=>Math.exp(v-mx)),sm=ex.reduce((x,y)=>x+y);
-  return textCache[raw]={pu:sigm(zu),pt:ex.map(v=>v/sm)};
+  const result={pu:sigm(zu),pt:ex.map(v=>v/sm)};
+  if(textCache.size>=256)textCache.delete(textCache.keys().next().value);
+  textCache.set(normalized,result);return result;
 }
 /* --- memory: how THIS user reacts to each sender / app type / time block / busy state --- */
 const CAT={Telegram:0,WhatsApp:0,Slack:1,Mail:2,Bank:3,Shop:4,Instagram:5};
@@ -1173,7 +1176,7 @@ const slot=(g,k)=>MEM[g][k]||blank();
 const nowMin=()=>Date.now()/60000;
 const hasOtp=n=>RX.otp.test(n.body);
 function features(n,C){
-  const t=nowMin(), d=new Date(), hour=d.getHours()+d.getMinutes()/60, c=CAT[n.app]??6, sk=n.app+'|'+n.from, hb=Math.floor(hour/6);
+  const t=nowMin(), d=new Date(), hour=d.getHours()+d.getMinutes()/60, c=Object.prototype.hasOwnProperty.call(CAT,n.app)?CAT[n.app]:6, sk=n.app+'|'+n.from, hb=Math.floor(hour/6);
   const busy=(C.fs||C.priv)?1:0, S=slot('s',sk), Cc=slot('c',c), Hh=slot('h',hb), U=MEM.u, Bz=MEM.b, Rb=slot('rb',busy);
   const x=[0,0,0,0,0,0,0], tm=textModel(n.body); x[c]=1;
   x.push(n.direct?1:0, RX.men.test(n.body)?1:0, RX.q.test(n.body)?1:0, RX.urg.test(n.body)?1:0, hasOtp(n)?1:0, RX.promo.test(n.body)?1:0,
@@ -1282,13 +1285,13 @@ function decide(n,p,C){
 }
 /* === MODEL:END === */
 
-const lastReply={};
+const lastReply=Object.create(null);
 function predict(n){return predictF(features(n,ctx))}
 function learn(n,y,lr,why){
   if(n._bt&&ctx.timer){FOC.shield=Math.max(.6,Math.min(2.4,FOC.shield+(y?-.15:.15)));saveFoc()}   /* was the break-through welcome? */
   if(!n._f)memArrive(n,features(n,ctx));
   const before=n._p??predict(n);memLearn(n,y);
-  log(`<b>${n.from}</b> (${n.app}): you ${why} → importance ${pc(before)} → <b>${pc(predict(n))}</b>`);renderBrain();renderHD();
+  log(`<b>${esc(n.from)}</b> (${esc(n.app)}): you ${esc(why)} → importance ${pc(before)} → <b>${pc(predict(n))}</b>`);renderBrain();renderHD();
 }
 const pc=p=>Math.round(p*100)+'%';
 /* the context vector the policy reads: not only notification features, the whole device's state */
@@ -1346,7 +1349,7 @@ function fillToast(n){
 /* hovering a toast whose text is cut off opens it to at most three lines */
 wrap.addEventListener('mouseenter',()=>{if(cur!=='toast')return;const b=$('#t-body');if(b.scrollWidth>b.clientWidth+1){$('#s-toast').classList.add('open');show('toast')}});
 /* reply suggestions follow the message: language, question, time, urgency, mention, media */
-function smartReplies(n){const b=n.body,fa=/[\u0600-\u06FF]/.test(b),tm=/\d{1,2}[:.]\d{2}|[۰-۹]{1,2}:[۰-۹]{2}|\bat \d|ساعت/.test(b);
+function smartReplies(n){if(n.otp||isCode(n)||n._scam)return [];const sc=scamScore(n,textModel(n.body));if(sc.v>=SCAM_AT&&sc.evidence)return [];const b=n.body,fa=/[\u0600-\u06FF]/.test(b),tm=/\d{1,2}[:.]\d{2}|[۰-۹]{1,2}:[۰-۹]{2}|\bat \d|ساعت/.test(b);
   const S=fa?{tm:['باشه، می‌بینمت','۱۰ دقیقه دیرتر می‌رسم','نمی‌رسم'],urg:['الان زنگ می‌زنم','۵ دقیقه دیگه','در جریانم'],q:['آره','نه','خبر می‌دم'],d:['باشه','ممنون','بعداً صحبت کنیم']}
     :{tm:['Yes, see you then','Running 10 min late',"Can't make it"],urg:['On it','Give me 5 min','Calling you now'],men:['Will review today','Looks good','Need more time'],media:['Love it ❤️','Nice!','😂'],q:['Yes','No','Let me check'],d:['Got it','Thanks!','Talk later']};
   return RX.urg.test(b)?S.urg:tm?S.tm:RX.men.test(b)&&S.men?S.men:/photo|pic|video|عکس/i.test(b)&&S.media?S.media:RX.q.test(b)?S.q:S.d}
@@ -1415,7 +1418,7 @@ function renderBrain(){
     return `<div class="br"><span class="ell"><span class="dot" style="display:inline-block;background:${s.c};margin-right:6px"></span>${s.from}</span><div class="bar"><i style="width:${p*100}%"></i></div><span class="num t2">${pc(p)}</span><span class="lv" style="color:${col}">${lv}</span></div>`}).join('');
 }
 function log(h){$('#log').innerHTML=h}
-$('#reset').onclick=()=>{MEM=freshMem();saveMem();FOC=freshFoc();saveFoc();dwell=450;try{localStorage.removeItem('islandx-dwell')}catch(e){}renderHD();renderBrain();log('Learning reset to defaults.')};
+$('#reset').onclick=()=>{MEM=freshMem();saveMem();FOC=freshFoc();saveFoc();dwell=420;try{localStorage.removeItem('islandx-dwell')}catch(e){}renderHD();renderBrain();log('Learning reset to defaults.')};
 
 /* ================= dock ================= */
 SRC.forEach(s=>{const b=document.createElement('button');b.innerHTML=`<span class="dot" style="background:${s.c}"></span>${s.app==s.from?s.app+(s.otp?' code':' promo'):s.from}`;b.onclick=()=>notify(s);$('#b-notif').appendChild(b)});

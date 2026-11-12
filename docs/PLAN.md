@@ -31,7 +31,7 @@
 node IslandX-Model/test_engine.js    # 19/21 · 2 known gap
 node IslandX-Model/test_context.js   # 12/12 · سیاست زمینه
 node IslandX-Model/eval_engine.js    # ارزیابی int8 روی تست‌ست‌های واقعی
-node tests/ui-scenario.js            # 59/59 · 0 runtime error
+node tests/ui-scenario.js            # 65/65 · 0 runtime error
 ```
 
 ## آرشیو دستور قبلی
