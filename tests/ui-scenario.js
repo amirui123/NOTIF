@@ -74,7 +74,7 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   // reply → sent
   btn('#b-notif button',/Sara/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(300);
   const r=d.querySelector('#t-reply');
-  if(r){r.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));await wait(250);click('#r-send');await wait(250);
+  if(r){r.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));await wait(250);click('#r-send');ok('empty reply stays open',state()==='reply');d.querySelector('#rin').value='Thanks!';d.querySelector('#rin').dispatchEvent(new w.Event('input',{bubbles:true}));click('#r-send');await wait(250);
     ok('sent confirmation',state()==='sent',state());}
   else ok('sent confirmation',false,'no reply button, state='+state());
 
@@ -132,6 +132,27 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   btn('#b-sys button',/Next event/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(400);
   ok('event → calendar tile',state()==='event'&&!!d.querySelector('#s-event .tile'),state());
   await wait(6200);
+
+  // Features merged from the newer file.
+  w.palOpen(); await wait(120);
+  ok('command palette opens',state()==='pal' && d.querySelectorAll('#plist .pit').length>0,state());
+  d.querySelector('#pin').value='vol 40';d.querySelector('#pin').dispatchEvent(new w.Event('input',{bubbles:true}));
+  ok('command palette parses volume',/40/.test(d.querySelector('#plist').textContent));
+  d.querySelector('#pin').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true})); await wait(200);
+  ok('command executes volume',+d.querySelector('[data-sl=vol]').dataset.v===40,state());
+  await wait(2100);
+  w.renderPset();w.show('pset');click('#ps-smart');click('#s-pset [data-k=focus] [data-d="1"]');
+  ok('timer settings persist',!!w.localStorage.getItem('islandx-pcfg')&&/min/.test(d.querySelector('#s-pset [data-k=focus] b').textContent));
+  w.settle();await wait(200);
+  w.joinMeeting('Test meeting');await wait(200);
+  ok('meeting pill starts',state()==='meet'&&d.querySelector('[data-meet-t]').textContent==='Test meeting',state());
+  w.leaveMeeting();await wait(200);
+  ok('meeting exits',state()!=='meet',state());
+  click('#b-ctx button[data-k=priv]');await wait(200);w.joinMeeting('Private meeting');w.leaveMeeting();
+  ok('meeting preserves existing privacy state',d.querySelector('#b-ctx button[data-k=priv]').classList.contains('on'));
+  click('#b-ctx button[data-k=priv]');await wait(2700);
+  w.notify({app:'Messages',from:'<img src=x onerror=alert(1)>',body:'<img src=x onerror=alert(1)>',c:'#fff'});w.renderPeek();
+  ok('grouped notifications escape external text',!d.querySelector('#list img')&&d.querySelector('#list').textContent.includes('<img'));
 
   // persistence
   const ls={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);ls[k]=1}
