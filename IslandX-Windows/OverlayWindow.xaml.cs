@@ -87,7 +87,15 @@ public partial class OverlayWindow : Window
                 core.NavigationCompleted += async (_, e) =>
                 {
                     bool ok = false;
-                    try { if (e.IsSuccess) ok = await core.ExecuteScriptAsync("Boolean(document.documentElement.dataset.nativeOverlay === 'true' && document.querySelector('#island') && typeof textModel === 'function' && window.__islandErrors.length === 0)") == "true"; } catch (Exception) { }
+                    try
+                    {
+                        if (e.IsSuccess)
+                        {
+                            await System.Threading.Tasks.Task.Delay(1200);
+                            ok = await core.ExecuteScriptAsync("Boolean(document.documentElement.dataset.nativeOverlay === 'true' && document.querySelector('#island .st.on') && getComputedStyle(document.querySelector('#dock')).display === 'none' && typeof textModel === 'function' && batt.pct === 73 && batt.w > 0 && window.__islandErrors.length === 0)") == "true" && Width >= 100 && Height >= 30;
+                        }
+                    }
+                    catch (Exception) { }
                     _exiting = true; Application.Current.Shutdown(ok ? 0 : 1);
                 };
             }
@@ -103,6 +111,11 @@ public partial class OverlayWindow : Window
     private void SendPower()
     {
         if (!_ready || View.CoreWebView2 == null) return;
+        if (_smokeTest)
+        {
+            View.CoreWebView2.PostWebMessageAsJson("{\"type\":\"power\",\"percent\":73,\"plugged\":true}");
+            return;
+        }
         var power = Forms.SystemInformation.PowerStatus;
         if (power.BatteryChargeStatus.HasFlag(Forms.BatteryChargeStatus.NoSystemBattery) || power.BatteryLifePercent < 0) return;
         View.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "power", percent = power.BatteryLifePercent * 100, plugged = power.PowerLineStatus == Forms.PowerLineStatus.Online }));

@@ -27,6 +27,7 @@
       const data = event.data;
       if (!data || data.type !== 'power' || !Number.isFinite(data.percent)) return;
       const pct = Math.max(0,Math.min(100,Math.round(data.percent))), plugged = data.plugged === true;
+      if (lastPower && lastPower.percent === pct && lastPower.plugged === plugged) return;
       batt.pct = pct;
       /* 1 is a boolean sentinel: Windows' power status API does not report charger wattage. */
       batt.w = plugged ? 1 : 0;

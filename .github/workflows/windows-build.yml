@@ -69,18 +69,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           Copy-Item IslandX-Windows/README.md out/IslandX-Windows/README.md
+          Copy-Item IslandX-Prototype/index.html out/IslandX-demo.html
           Compress-Archive -Path out/IslandX-Windows/* -DestinationPath out/IslandX-preview-win-x64.zip
           $notes = @'
-          **Experimental preview — not a finished Windows island or installer.**
+          **Experimental preview — not a finished product or installer.**
 
-          The first window runs the original IslandX HTML prototype offline, including its existing appearance, animations and trained models. The prototype's notifications, music, battery and other system controls are simulated, not connected to Windows. A separate experimental native status panel can read the clock, battery and clipboard on demand and offers opt-in sign-in startup.
+          The app starts an experimental topmost desktop island based on the original prototype. The Windows clock and battery percentage/plugged-in state are connected; charger wattage is not available. The tray menu opens the full demo and an early native panel. Notifications, media, fullscreen detection, and clipboard history are not integrated. The separately downloadable HTML file is the original standalone demo, with simulated system events.
 
-          **Requirements:** Windows x64 and Microsoft Edge WebView2 Runtime. The .NET runtime is bundled. This unsigned portable build may trigger SmartScreen. No installation or uninstaller is included.
+          **Requirements:** Windows 10 version 2004 or newer, x64, and Microsoft Edge WebView2 Runtime. The .NET runtime is bundled. This unsigned portable build may trigger SmartScreen. There is no installer or uninstaller.
 
-          Download the ZIP, extract all files to a permanent folder and run IslandX.Windows.exe. Use the tray icon to reopen the preview or exit. Startup is off unless explicitly enabled in the separate native panel; disable it there before moving or deleting the files.
+          Download the ZIP, extract all files to a permanent folder and run IslandX.Windows.exe. Use the tray icon to reopen the island, open the demo, or exit. Startup is off unless explicitly enabled in the separate native panel; disable it there before moving or deleting the files.
 
-          Windows notification integration, a desktop overlay, persistent clipboard history, media integration, installer, signing, and full interactive/security/real-device testing are not complete. Do not use sensitive clipboard data in this preview. UI and behaviour may change substantially.
+          Real-device visual, input, battery, startup, and security testing remain incomplete. Do not rely on this preview for important notifications or sensitive clipboard data. UI and behaviour may change substantially.
           '@
           $notes | Set-Content -Encoding utf8 out/release-notes.txt
-          gh release create v0.1.0-preview out/IslandX-preview-win-x64.zip --target $env:GITHUB_SHA --title "IslandX 0.1.0 — experimental preview" --notes-file out/release-notes.txt --prerelease
+          gh release create v0.2.0-preview out/IslandX-preview-win-x64.zip out/IslandX-demo.html --target $env:GITHUB_SHA --title "IslandX 0.2.0 — experimental desktop island" --notes-file out/release-notes.txt --prerelease
           if ($LASTEXITCODE -ne 0) { throw 'Could not publish preview release' }

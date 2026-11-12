@@ -1,15 +1,15 @@
-# IslandX Windows — experimental preview
+# IslandX Windows — experimental desktop island
 
-This is **not the finished product**. The first window hosts the actual, unchanged `IslandX-Prototype/index.html`, embedded into the application. Its battery, notification, music, meeting, and context controls remain simulations: it is not yet a real desktop island. The embedded page and trained weights run locally; WebView2 Runtime must already be installed. A virtual local origin is served from the embedded resource, with network requests blocked.
+This preview opens a small, topmost island on the primary screen using the actual HTML prototype and its embedded weights. Its transparent desktop shell is experimental and not a finished product. The system clock and battery percentage/plugged-in state come from Windows. Wattage and time-to-full are not available from this integration and are not claimed. The full demo, which includes simulated notifications and other test controls, is available via the tray menu.
 
-The tray menu also exposes a separate early native status panel. That panel reads the Windows clock and battery, can optionally register per-user startup on request, and reads clipboard text only when the button is pressed. Clipboard text is not persisted and is cleared from the display when the panel is collapsed or hidden. The tray menu can exit. Startup opens the prototype preview, not a finished background island. The startup entry points to the executable in its current location; moving/deleting it breaks startup. Remove the optional entry via the checkbox before deleting the preview.
+**Not yet implemented:** real Windows notifications, actual media sessions, automatic fullscreen detection, a persistent clipboard history, a full installer/uninstaller, and the other system integrations. The controls for those in the demo are simulations. The tray offers an early native panel that can read clipboard text on demand and can enable per-user startup; clipboard text is not persisted. Startup is off until enabled by the user, and uses the executable at its current location. Disable it in the panel before moving or deleting that executable.
 
-The final native notification bridge, a persistent clipboard history, real media, full-screen detection, and the native island are **not implemented**. The UI is not yet integrated with the real machine. This preview has not undergone a security audit or real-device interactive test; unsigned binaries may trigger SmartScreen. Do not use sensitive clipboard data.
+The page and models are embedded, served from memory and run offline; outgoing page requests are blocked. Microsoft Edge WebView2 Runtime must already be installed. The .NET runtime is bundled in the Windows x64 ZIP. This unsigned preview has not had a security audit or interactive testing on real devices. It should not be used for sensitive clipboard data or relied on for important notifications.
 
-Build on Windows with the .NET 10 SDK (restore needs NuGet, runtime use is offline):
+Build on Windows 10 2004 or newer with the .NET 10 SDK (package restore needs NuGet; normal operation is offline):
 
 ```powershell
 dotnet publish IslandX-Windows/IslandX.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o out/IslandX-Windows
 ```
 
-A successful CI build and brief process-start test do not validate interactive rendering, startup on login, or real hardware. The workflow builds an experimental artifact, not a finished release.
+The GitHub workflow compiles and starts the executable and checks both embedded pages and a simulated battery message. It does not replace real-device testing for rendering, hit testing, battery, permissions, or startup.
