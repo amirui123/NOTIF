@@ -1,0 +1,29 @@
+name: Windows experimental build
+on:
+  push:
+    paths:
+      - 'IslandX-Windows/**'
+      - '.github/workflows/windows-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build Windows preview
+        run: dotnet build IslandX-Windows/IslandX.Windows.csproj --configuration Release
+      - name: Publish standalone preview
+        run: dotnet publish IslandX-Windows/IslandX.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true --output out/IslandX-Windows
+      - name: Upload experimental build (not a release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: IslandX-Windows-experimental-win-x64
+          path: out/IslandX-Windows/
+          if-no-files-found: error
+          retention-days: 7
