@@ -43,7 +43,7 @@ npm run serve          # python3 -m http.server 8080 --directory IslandX-Prototy
 npm test              # مدل متن (۹ کیس) + سیاست تصمیم (۱۲ کیس)
 npm run test:context  # سیاست زمینه: آستانه‌ها، DND، خستگی از ردکردن، کالیبراسیون
 npm run test:eval     # ارزیابی موتور int8 روی تست‌ست‌های واقعی
-npm i && npm run test:ui   # بوت دمو در DOM بی‌سر و ۴۲ سناریوی تعاملی
+npm i && npm run test:ui   # بوت دمو در DOM بی‌سر و ۵۹ سناریوی تعاملی
 ```
 
 هر دو تست، کد را از خودِ `index.html` برمی‌دارند — پس همیشه همان چیزی را می‌سنجند که منتشر می‌شود.

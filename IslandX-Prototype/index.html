@@ -785,6 +785,7 @@ body:not(.playing) #s-musicx .art{filter:saturate(.5) brightness(.75)}
 #island .st.fs-slide{animation:fs-slide-in .32s cubic-bezier(.16,1,.3,1) both}
 @keyframes fs-slide-in{from{opacity:0;transform:translateX(calc(-50% + var(--fs-offset,0px))) scale(.98)}to{opacity:1;transform:translateX(-50%) scale(1)}}
 @media (prefers-reduced-motion:reduce){#island .st.fs-slide{animation:none!important}}
+#a-sound{border:0;padding:0;background:transparent;font:inherit}
 /* Shared-element flight is temporary and never changes the original controls. */
 .shared-moving{visibility:hidden!important}
 .shared-flight{position:fixed!important;z-index:9999;pointer-events:none!important;margin:0!important;animation:none!important;transition:none!important;transform-origin:0 0!important}
@@ -813,7 +814,7 @@ body:not(.playing) #s-musicx .art{filter:saturate(.5) brightness(.75)}
     <div class="st col" id="s-peek">
       <div class="row top">
         <span class="clk num" data-clock></span><span class="t2 xs" data-date></span><span class="sp"></span>
-        <span class="ib" id="a-pal" data-i="search" title="Commands (Ctrl+K)"></span><span class="ib" id="a-shot" data-i="shot" title="Screenshot"></span>
+        <button type="button" class="ib" id="a-sound" title="Sound off" aria-label="Sound off" aria-pressed="false" data-i="speaker"></button><span class="ib" id="a-pal" data-i="search" title="Commands (Ctrl+K)"></span><span class="ib" id="a-shot" data-i="shot" title="Screenshot"></span>
         <span class="ib" id="a-timer" data-i="timer" title="Timer"></span>
         <span class="ib" id="a-dnd" data-i="moon" title="Do not disturb"></span>
       </div>
@@ -956,6 +957,22 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 $$('[data-i]').forEach(e=>e.insertAdjacentHTML('afterbegin',ico(e.dataset.i)));
 const setIco=(el,n,v)=>{el.querySelector('svg').outerHTML=ico(n,v)};
+/* Optional, session-only audio. No context is created until explicitly enabled by a gesture. */
+let soundEnabled=false,soundContext=null,soundPending=false,soundRequest=0;
+const soundButton=$('#a-sound');
+function soundButtonDraw(){soundButton.classList.toggle('on',soundEnabled);soundButton.setAttribute('aria-pressed',String(soundEnabled));soundButton.title=soundEnabled?'Sound on':'Sound off';soundButton.setAttribute('aria-label',soundButton.title);setIco(soundButton,'speaker',soundEnabled?64:0)}
+soundButtonDraw();
+soundButton.addEventListener('click',async e=>{e.stopPropagation();if(soundEnabled||soundPending){soundRequest++;soundEnabled=false;soundPending=false;soundButtonDraw();return}
+  const request=++soundRequest;soundPending=true;
+  try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){if(!soundContext)soundContext=new Audio();if(soundContext.state==='suspended')await soundContext.resume();if(request===soundRequest&&soundContext.state==='running')soundEnabled=true}}catch(e){if(request===soundRequest)soundEnabled=false}
+  if(request===soundRequest){soundPending=false;soundButtonDraw()}
+});
+function soundCue(kind){
+  if(!soundEnabled||!soundContext||soundContext.state!=='running'||ctx.dnd)return;
+  const patterns={message:[[660,0,.075],[880,.085,.10]],sent:[[740,0,.065],[990,.065,.09]],focus:[[523,0,.09],[659,.11,.09],[784,.22,.12]],charge:[[440,0,.07],[660,.08,.12]]};
+  const notes=patterns[kind];if(!notes)return;
+  try{const now=soundContext.currentTime;for(const [hz,delay,duration] of notes){const osc=soundContext.createOscillator(),gain=soundContext.createGain(),start=now+delay;osc.type='sine';osc.frequency.setValueAtTime(hz,start);gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.018,start+.012);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain);gain.connect(soundContext.destination);osc.start(start);osc.stop(start+duration+.01);osc.onended=()=>{osc.disconnect();gain.disconnect()}}}catch(e){} /* unsupported or interrupted audio must not affect UI */
+}
 
 /* ================= engine ================= */
 const wrap=$('#wrap'), island=$('#island');
@@ -1303,7 +1320,7 @@ function notify(src){
   log(`<b>${esc(n.from)}</b> (${esc(n.app)}) importance ${pc(p)} → ${what} <span class="t3">· text model: ${(t=>TYPES[t.pt.indexOf(Math.max(...t.pt))]+' '+pc(Math.max(...t.pt)))(textModel(n.body))}</span>`+
     (dec==='scam'&&n._scamWhy?` <span class="t3">· scam guard: ${esc(n._scamWhy)} · score ${pc(n._scamScore)}</span>`:''));
   if(STICKY.includes(cur))return;
-  if(lv==='show'){active=n;fillToast(n);transient('toast',5000,()=>learn(n,0,.25,'ignored it'))}
+  if(lv==='show'){soundCue('message');active=n;fillToast(n);transient('toast',5000,()=>learn(n,0,.25,'ignored it'))}
   else if(lv==='glance'){
     if(ctx.fs){pulse(n.c);if(isBase())show(cur)}
     else{active=n;$('#g-dot').style.background=n.c;$('#g-from').textContent=n.from;$('#g-body').textContent=n.body;transient('glance',2200,()=>learn(n,0,.12,'ignored it'))}
@@ -1351,7 +1368,7 @@ $('#s-toast').addEventListener('click',e=>{
   else{onExpire=null;learn(n,1,.6,n.otp?'copied the code':'opened it');drop(n);settle();if(n.otp){copyText(n.otp).then(ok=>sentPill(ok?'Copied':'Copy unavailable',ok?n.otp:''))}}
 });
 $('#s-glance').addEventListener('click',()=>{const n=active;if(!n)return;onExpire=null;learn(n,1,.6,'opened it');drop(n);settle()});
-function sendReply(){const n=active;if(n&&!$('#rin').value.trim()){const i=$('#s-reply .inp');i.classList.remove('shk');void i.offsetWidth;i.classList.add('shk');return}if(n){$('#s-sent .b').textContent='Sent';lastReply[n.from]=Date.now();learn(n,1,.8,'replied');drop(n);$('#sent-to').textContent='to '+n.from;settle();transient('sent',1400);return}settle()}
+function sendReply(){const n=active;if(n&&!$('#rin').value.trim()){const i=$('#s-reply .inp');i.classList.remove('shk');void i.offsetWidth;i.classList.add('shk');return}if(n){soundCue('sent');$('#s-sent .b').textContent='Sent';lastReply[n.from]=Date.now();learn(n,1,.8,'replied');drop(n);$('#sent-to').textContent='to '+n.from;settle();transient('sent',1400);return}settle()}
 $('#r-send').onclick=sendReply;$('#r-x').onclick=settle;
 $$('.chip').forEach(c=>c.onclick=()=>{$('#rin').value=c.textContent;$('#rin').focus()});
 addEventListener('keydown',e=>{if(cur==='reply'){if(e.key==='Enter')sendReply();if(e.key==='Escape')settle()}else if(e.key==='Escape')settle()});
@@ -1460,7 +1477,7 @@ $('#l-save').onclick=e=>{e.stopPropagation();batt.saver=true;renderBatt();show('
 [['Volume','vol',1800],['Brightness','bri',1800],['Charger 65 W','chg',3400,65],['Slow charger','chg',3800,10],['Unplug','chg',2800,0],['Low battery','lowbat',5000],['Next event','event',6000],['Screenshot','shot',0]].forEach(([l,id,ms,w])=>{
   const b=document.createElement('button');b.textContent=l;
   b.onclick=()=>{ if(ctx.dnd&&id!=='lowbat'&&id!=='shot'){log(`<b>${l}</b> suppressed by Do not disturb`);return}
-    if(id==='chg'){batt.w=w;if(w)batt.saver=false;const t=renderBatt();log(`<b>${l}</b> → ${t}`);
+    if(id==='chg'){const wasPlugged=batt.w>0;batt.w=w;if(w&&!wasPlugged)soundCue('charge');if(w)batt.saver=false;const t=renderBatt();log(`<b>${l}</b> → ${t}`);
       if(ctx.fs){pulse(!w?'#E5E5EA':w<30?'#FBBF24':'#34D399');return}}
     if(id==='lowbat'){batt.pct=9;batt.w=0;batt.saver=false;renderBatt()}
     ms?transient(id,ms):show(id)};
@@ -1628,6 +1645,7 @@ function card(ic,t,sub,a,b,onA,onB){
 }
 function phaseEnd(){
   if(PO.phase==='focus'){
+    soundCue('focus');
     const L=PO.L,h=PO.held.length,b=recommend();
     if(PO.ext){FOC.min+=5;saveFoc()}else focLearn(L,1,L,PO.ints);PO.ext=0;PO.len=L*60;
     const bm=startBreak();renderHD();

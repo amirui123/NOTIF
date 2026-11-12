@@ -20,6 +20,12 @@ vc.on('error',(...a)=>errors.push('console.error: '+a.join(' ')));
 const dom=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,url:'http://localhost/',virtualConsole:vc,beforeParse(w){
   w.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){},addListener(){},removeListener(){}});
   w.devicePixelRatio=2;
+  // A silent Web Audio stub counts scheduled tones; no speaker is used by this test.
+  w.__tones=[];w.AudioContext=class {constructor(){this.state='running';this.currentTime=0;this.destination={}}
+    resume(){this.state='running';return Promise.resolve()}
+    createOscillator(){return {frequency:{setValueAtTime(){}},connect(){},disconnect(){},start(){w.__tones.push(1)},stop(){}}}
+    createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}}}
+  };
   const p=new Proxy({},{get:(t,k)=>k==='canvas'?null:((...a)=>p),set:()=>true});
   w.HTMLCanvasElement.prototype.getContext=()=>p;
   w.Element.prototype.setPointerCapture=()=>{};w.Element.prototype.releasePointerCapture=()=>{};
@@ -190,6 +196,34 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   click('#fsnav [data-t=musicx]');
   ok('fullscreen tab moves from left',d.querySelector('#s-musicx').style.getPropertyValue('--fs-offset')==='-14px'&&d.querySelector('#s-musicx').classList.contains('fs-slide'));
   w.settle();click('#b-ctx button[data-k=timer]');click('#b-ctx button[data-k=music]');click('#b-ctx button[data-k=fs]');
+
+  // Exercise hover intent in both desktop and full-screen modes.
+  const wrap=d.querySelector('#wrap');w.settle();
+  wrap.dispatchEvent(new w.MouseEvent('mouseenter',{bubbles:false}));await wait(130);
+  ok('desktop hover opens promptly',state()==='peek',state());
+  wrap.dispatchEvent(new w.MouseEvent('mouseleave',{bubbles:false}));await wait(300);
+  ok('desktop hover closes',state()==='idle',state());
+  click('#b-ctx button[data-k=fs]');wrap.dispatchEvent(new w.MouseEvent('mouseenter',{bubbles:false}));await wait(220);
+  ok('fullscreen requires dwell',state()==='line',state());
+  await wait(350);ok('fullscreen opens after dwell',state()==='peek',state());
+  wrap.dispatchEvent(new w.MouseEvent('mouseleave',{bubbles:false}));await wait(300);click('#b-ctx button[data-k=fs]');
+
+  // Sound is opt-in and follows actual events; quiet mode suppresses cues.
+  ok('sound defaults off',d.querySelector('#a-sound').getAttribute('aria-pressed')==='false'&&w.__tones.length===0);
+  click('#a-sound');await wait(50);
+  ok('sound enables only by gesture',d.querySelector('#a-sound').getAttribute('aria-pressed')==='true');
+  let tones=w.__tones.length;w.notify({app:'Bank',from:'Bank',body:'Your code is 123456',otp:'123456',c:'#34D399'});
+  ok('important message sound',w.__tones.length>tones);
+  w.settle();tones=w.__tones.length;w.openReply({app:'Telegram',from:'Sara',body:'Hello?',c:'#38BDF8',id:10});d.querySelector('#rin').value='Thanks';w.sendReply();
+  ok('send sound',w.__tones.length>tones);
+  w.settle();tones=w.__tones.length;btn('#b-sys button',/65 W/).dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  ok('plug-in sound',w.__tones.length>tones);
+  w.settle();click('#b-ctx button[data-k=timer]');tones=w.__tones.length;w.phaseEnd();
+  ok('focus completion sound',w.__tones.length>tones);
+  w.settle();click('#b-ctx button[data-k=timer]');click('#b-ctx button[data-k=dnd]');tones=w.__tones.length;w.soundCue('message');
+  ok('quiet mode suppresses sound',w.__tones.length===tones);
+  click('#b-ctx button[data-k=dnd]');click('#a-sound');tones=w.__tones.length;w.soundCue('message');
+  ok('sound off suppresses sound',w.__tones.length===tones&&d.querySelector('#a-sound').getAttribute('aria-pressed')==='false');
 
   // persistence
   const ls={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);ls[k]=1}
