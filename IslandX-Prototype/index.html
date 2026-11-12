@@ -543,6 +543,113 @@ body.playing #s-line::before{--hg:var(--tc)}
   #s-toast[data-k=promotional],#s-priv [data-i]::after,#s-sent.on .okc::after,#s-glance.on .scan{animation:none!important}
   #s-glance .scan{width:100%;opacity:.35}
 }
+
+/* =====================================================================
+   v13 — battery & charging as an actual energy system
+   One idea per layer: the cell has structure (segments, a leading edge),
+   the fill is alive (light travelling through the electrolyte), the current
+   is visible between the bolt and the cell, and urgency is a heartbeat —
+   not a sine wave. Everything is driven by --p, --fs, --sp so the same
+   markup renders a 65 W fast charge and a 10 W trickle differently.
+   ===================================================================== */
+
+/* --- the cell: segment ticks + a bright leading edge that shows the level precisely --- */
+.bat .segs{position:absolute;inset:2px;border-radius:2.5px;pointer-events:none;z-index:1;
+  background:repeating-linear-gradient(90deg,transparent 0 7px,rgba(0,0,0,.45) 7px 8px)}
+#s-chg .bat .segs{opacity:.45}
+/* a real cell has a rim and a curved glass, not a flat rectangle */
+#s-chg .bat::before,#s-lowbat .bat::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:3;
+  background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.04) 42%,rgba(0,0,0,.22));mix-blend-mode:overlay}
+#s-chg[data-mode=fast] .bat{box-shadow:inset 0 0 0 1px rgba(52,211,153,.42),0 0 20px -6px rgba(52,211,153,.65)}
+#s-lowbat .bat .segs{opacity:.7}
+.bat .edge{position:absolute;right:0;top:0;bottom:0;width:2px;border-radius:2px;z-index:2;
+  background:#F2FFF9;box-shadow:0 0 7px 1px rgba(110,231,183,.95),0 0 10px 3px rgba(167,243,208,.45);opacity:0}
+#s-chg.plug .bat .edge{opacity:.95;animation:edgepulse 1.7s ease-in-out infinite}
+#s-chg.plug.on .bat{animation:rimflash 1s ease-out .45s 1 both}
+@keyframes rimflash{0%{filter:brightness(1.65)}100%{filter:brightness(1)}}
+#c-pct.tick{animation:ptick .45s cubic-bezier(.3,1.6,.4,1)}
+@keyframes ptick{40%{transform:translateY(-2px);color:#D1FAE5}}
+@keyframes edgepulse{50%{box-shadow:0 0 15px 2px rgba(110,231,183,.65),0 0 4px #fff}}
+
+/* --- ions: the charge physically arriving, rising through the cell --- */
+#s-chg .ions{position:absolute;inset:2px;border-radius:2.5px;overflow:hidden;pointer-events:none;display:none;z-index:1}
+#s-chg.plug .ions{display:block}
+#s-chg .ions i{position:absolute;bottom:-2px;width:2px;height:2px;border-radius:50%;background:#DCFFF2;
+  box-shadow:0 0 5px rgba(110,231,183,.9);opacity:0;animation:ion var(--sp,2.4s) linear infinite}
+#s-chg .ions i:nth-child(1){left:13%;animation-delay:0s}
+#s-chg .ions i:nth-child(2){left:37%;animation-delay:calc(var(--sp,2.4s) * -.26)}
+#s-chg .ions i:nth-child(3){left:61%;animation-delay:calc(var(--sp,2.4s) * -.53)}
+#s-chg .ions i:nth-child(4){left:85%;animation-delay:calc(var(--sp,2.4s) * -.79)}
+@keyframes ion{0%{transform:translateY(0) scale(.5);opacity:0}25%{opacity:.85}100%{transform:translateY(-13px) scale(.2);opacity:0}}
+
+/* --- the fill: light moving through it, instead of a white bar sweeping over it --- */
+#s-chg .bat.chg i{overflow:hidden;
+  background:linear-gradient(100deg,#0E9F6E,#34D399 26%,#A7F3D0 46%,#34D399 66%,#0B8F63 94%);
+  background-size:230% 100%;animation:energize var(--fs,1.6s) ease-in-out infinite;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 0 12px -2px rgba(52,211,153,.55)}
+@keyframes energize{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+#s-chg .bat.chg i::after{display:none}          /* the old white sweep is replaced by the light itself */
+
+/* --- wattage is a mood: fast is crisp emerald, slow is patient amber --- */
+#s-chg[data-mode=fast] .cg{background:linear-gradient(155deg,#6EE7B7,#10B981);
+  box-shadow:0 0 0 1px rgba(110,231,183,.5),0 0 18px -3px rgba(52,211,153,.9)}
+#s-chg[data-mode=slow] .cg{background:linear-gradient(155deg,#FDE68A,#F59E0B);
+  box-shadow:0 0 0 1px rgba(251,191,36,.45),0 0 18px -4px rgba(251,191,36,.85)}
+#s-chg[data-mode=slow] .cg::after{animation-duration:2.6s}
+#s-chg[data-mode=slow] .flow i{background:#FBBF24}
+#s-chg[data-mode=slow] .bat.chg i{background:linear-gradient(100deg,#B45309,#F59E0B 30%,#FDE68A 48%,#F59E0B 66%,#B45309 92%);
+  background-size:230% 100%;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 0 12px -2px rgba(245,158,11,.6)}
+#s-chg[data-mode=slow] .bat .edge{background:#FFF6E0;box-shadow:0 0 9px 1px rgba(251,191,36,.85),0 0 3px #fff}
+#s-chg[data-mode=slow] .bat{box-shadow:inset 0 0 0 1px rgba(251,191,36,.35),0 0 16px -6px rgba(251,191,36,.5)}
+#s-chg[data-mode=slow] #c-pct{color:#FCD34D}
+
+/* --- 100%: the cell settles, stops pulsing, and simply glows --- */
+#s-chg.full .bat i{background:linear-gradient(180deg,#A7F3D0,#34D399 58%,#059669);animation:none}
+#s-chg.full .bat .edge{opacity:0}
+#s-chg.full .bat{box-shadow:inset 0 0 0 1px rgba(52,211,153,.75),0 0 24px -4px rgba(52,211,153,.85);
+  animation:fullbreath 3.2s ease-in-out infinite}
+@keyframes fullbreath{50%{box-shadow:inset 0 0 0 1px rgba(167,243,208,.95),0 0 32px -2px rgba(52,211,153,.6)}}
+#s-chg.full #c-pct{color:#A7F3D0}
+
+/* --- unplugged: a calm, matte cell that is simply draining --- */
+#s-chg:not(.plug) .bat{background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.13)}
+#s-chg:not(.plug) .bat i{background:linear-gradient(180deg,#E8EAED,#9CA3AF);box-shadow:none;transition:width 1.4s cubic-bezier(.16,1,.3,1)}
+#s-chg:not(.plug) .bat .segs{opacity:.3}
+
+/* --- low battery: the empty part is hazard tape, the filled part is live metal --- */
+#s-lowbat .bat.low{background:repeating-linear-gradient(45deg,rgba(248,113,113,.16) 0 4px,rgba(127,29,29,.30) 4px 8px);
+  background-size:22px 100%;animation:tape 3.2s linear infinite;
+  box-shadow:inset 0 0 0 1px rgba(248,113,113,.6),0 0 18px -6px rgba(248,113,113,.8)}
+@keyframes tape{to{background-position:22px 0}}
+#s-lowbat .bat.low i{background:linear-gradient(90deg,#7F1D1D,#DC2626 45%,#F87171);
+  box-shadow:0 0 10px rgba(248,113,113,.6),inset 0 1px 0 rgba(255,255,255,.4);animation:none}
+#s-lowbat.on .bat.low i{animation:lastseg 2.2s steps(1,end) infinite}
+@keyframes lastseg{0%,62%,100%{opacity:1}70%,86%{opacity:.55}}
+
+/* --- urgency is a heartbeat: lub-dub, not a sine --- */
+#s-lowbat.on{animation:heart 2.6s cubic-bezier(.22,.8,.25,1) infinite}
+@keyframes heart{
+  0%,100%{box-shadow:0 0 20px -13px rgba(248,113,113,.5)}
+  6%{box-shadow:0 0 32px -6px rgba(248,113,113,.95)}
+  15%{box-shadow:0 0 20px -13px rgba(248,113,113,.5)}
+  23%{box-shadow:0 0 27px -9px rgba(248,113,113,.75)}
+  34%{box-shadow:0 0 20px -13px rgba(248,113,113,.5)}}
+#s-lowbat.on #l-pct{animation:sputter 6.5s steps(1,end) infinite}
+@keyframes sputter{0%,94%,100%{opacity:1}95%{opacity:.48}95.6%{opacity:1}96.4%{opacity:.66}97.2%{opacity:1}}
+
+/* --- saver: the alarm stops, everything cools to amber --- */
+#s-lowbat.saver .bat.low{animation:none;
+  background:repeating-linear-gradient(45deg,rgba(251,191,36,.10) 0 4px,rgba(120,53,15,.20) 4px 8px);
+  box-shadow:inset 0 0 0 1px rgba(251,191,36,.45),0 0 18px -8px rgba(245,158,11,.6)}
+#s-lowbat.saver .bat.low i{background:linear-gradient(90deg,#B45309,#F59E0B 58%,#FDE68A);
+  box-shadow:0 0 9px rgba(245,158,11,.55),inset 0 1px 0 rgba(255,255,255,.45);animation:none}
+#s-lowbat.saver.on{animation:none;box-shadow:0 0 18px -10px rgba(245,158,11,.65)}
+#s-lowbat.saver #l-pct{color:#FCD34D!important;animation:none;text-shadow:0 0 12px rgba(245,158,11,.55)}
+
+@media (prefers-reduced-motion:reduce){
+  .bat .edge,#s-chg.plug .bat .edge,#s-chg .ions i,#s-chg .bat.chg i,#s-lowbat .bat.low,
+  #s-lowbat.on,#s-lowbat.on .bat.low i,#s-lowbat.on #l-pct,#s-chg.full .bat{animation:none!important}
+}
 </style>
 </head>
 <body>
@@ -606,10 +713,10 @@ body.playing #s-line::before{--hg:var(--tc)}
     <div class="st" id="s-vol"><span data-i="speaker" id="i-vol" class="t2"></span><div class="sl" data-sl="vol" data-v="64"><div class="tr"><span class="lad" id="vol-lad"></span><div class="fi"></div><div class="th"></div></div></div><span class="val num">64</span></div>
     <div class="st" id="s-bri"><span data-i="sun" id="i-bri" class="t2"></span><div class="sl" data-sl="bri" data-v="72"><div class="tr"><span class="beam"><i></i></span><div class="fi"></div><div class="th"></div></div></div><span class="val num">72</span></div>
 
-    <div class="st" id="s-chg"><i class="trace"></i><span class="cg" data-i="bolt"></span><span class="flow"><i></i><i></i><i></i></span><div class="bat" id="c-bat"><i></i></div><span class="b num" id="c-pct"></span><span class="t2 xs num" id="c-txt"></span></div>
+    <div class="st" id="s-chg"><i class="trace"></i><span class="cg" data-i="bolt"></span><span class="flow"><i></i><i></i><i></i></span><div class="bat" id="c-bat"><i><b class="edge"></b></i><span class="segs"></span><span class="ions"><i></i><i></i><i></i><i></i></span></div><span class="b num" id="c-pct"></span><span class="t2 xs num" id="c-txt"></span></div>
     <div class="st" id="s-dual"><div class="art"></div><canvas id="viz2"></canvas><i class="dsep"></i><svg class="pring" width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" class="pt"/><circle cx="9" cy="9" r="7" class="pr" data-c="43.98" stroke-dasharray="43.98" transform="rotate(-90 9 9)"/></svg><span class="num" data-timer></span></div>
     <div class="st" id="s-sent"><span class="okc" data-i="check"></span><span class="b">Sent</span><span class="t2 xs" id="sent-to"></span></div>
-    <div class="st" id="s-lowbat"><div class="bat low" id="l-bat"><i></i></div><span class="b num" id="l-pct" style="color:var(--bad);font-size:14px"></span><span class="t2 xs num" id="l-txt"></span><span class="pb" id="l-save" data-i="leaf">Saver</span></div>
+    <div class="st" id="s-lowbat"><div class="bat low" id="l-bat"><i></i><span class="segs"></span></div><span class="b num" id="l-pct" style="color:var(--bad);font-size:14px"></span><span class="t2 xs num" id="l-txt"></span><span class="pb" id="l-save" data-i="leaf">Saver</span></div>
 
     <div class="st" id="s-timerc"><svg class="pring" width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" class="pt"/><circle cx="9" cy="9" r="7" class="pr" data-c="43.98" stroke-dasharray="43.98" transform="rotate(-90 9 9)"/></svg><span class="num" data-timer></span><span class="t2 xs" id="pc-s"></span><span class="pdots" id="pc-d"></span><span class="held" id="pc-h"></span></div>
     <div class="st col" id="s-timerx">
@@ -1066,22 +1173,47 @@ const clockIn=m=>new Date(Date.now()+m*6e4).toLocaleTimeString('en-GB',{hour:'2-
 const leftMin=()=>batt.pct/100*60/(batt.saver?5.6:9)*60;
 let cuRaf=0;
 function countUp(el,to){cancelAnimationFrame(cuRaf);const from=to>=40?to-30:to>=10?10:0,t0=performance.now();el.textContent=(REDUCED?to:from)+'%';if(REDUCED)return;
-  const f=now=>{const k=Math.min(1,(now-t0)/1100),e=1-Math.pow(1-k,4);el.textContent=Math.round(from+(to-from)*e)+'%';if(k<1)cuRaf=requestAnimationFrame(f)};cuRaf=requestAnimationFrame(f)}
+  const f=now=>{const k=Math.min(1,(now-t0)/1100),e=1-Math.pow(1-k,4);el.textContent=Math.round(from+(to-from)*e)+'%';cuRaf=k<1?requestAnimationFrame(f):0};cuRaf=requestAnimationFrame(f)}
 function renderBatt(){
-  const {pct,w}=batt, rate=w*.85/60/60*100, slow=w>0&&w<30;
+  const pct=Math.round(batt.pct), w=batt.w, rate=w*.85/60/60*100, slow=w>0&&w<30;
   const col=!w?(pct<=15?'var(--bad)':'var(--t1)'):slow?'var(--warn)':'var(--ok)';
   let txt;
   if(!w)txt=`On battery · about ${hm(leftMin())} left`;
+  else if(pct>=100)txt=`Full · ${w} W · battery care active`;
   else if(pct>=80)txt=`Battery care · slow top-up · ${w} W`;
-  else if(pct<20)txt=`${slow?'Slow charger':'Fast charge'} · 20% in ${hm((20-pct)/rate)}`;
+  else if(pct<20)txt=`${slow?'Slow charger':'Fast charge'} · 20% in ${hm(Math.max(.02,(20-pct)/rate))}`;
   else txt=`${slow?'Slow charger · full':'Full'} by ${clockIn((100-pct)/rate)} · ${w} W`;
-  const c=$('#s-chg');c.style.setProperty('--bc',col);c.classList.toggle('plug',w>0);
-  if(w>0)countUp($('#c-pct'),pct);else{cancelAnimationFrame(cuRaf);$('#c-pct').textContent=pct+'%'}$('#c-txt').textContent=txt;c.style.setProperty('--fs',slow?'2.3s':'1.05s');
-  const cb=$('#c-bat');cb.classList.toggle('chg',w>0);cb.style.setProperty('--p',0);requestAnimationFrame(()=>requestAnimationFrame(()=>cb.style.setProperty('--p',pct)));
+  const c=$('#s-chg');
+  c.style.setProperty('--bc',col);c.classList.toggle('plug',w>0);
+  c.dataset.mode=!w?'off':slow?'slow':'fast';          /* wattage drives colour, speed and motion */
+  c.classList.toggle('full',w>0&&pct>=100);
+  c.style.setProperty('--fs',slow?'2.4s':'1.15s');      /* the light travelling through the fill */
+  c.style.setProperty('--sp',slow?'3.6s':'2.2s');       /* the ions */
+  if(w>0)countUp($('#c-pct'),pct);else{cancelAnimationFrame(cuRaf);cuRaf=0;$('#c-pct').textContent=pct+'%'}
+  $('#c-txt').textContent=txt;
+  const cb=$('#c-bat');cb.classList.toggle('chg',w>0);cb.style.setProperty('--p',0);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>cb.style.setProperty('--p',pct)));
   $('#l-pct').textContent=pct+'%';$('#l-bat').style.setProperty('--p',pct);
+  $('#s-lowbat').classList.toggle('saver',!!batt.saver);
   $('#l-txt').textContent=batt.saver?`Saver on · about ${hm(leftMin())}`:`about ${hm(leftMin())} left`;
   $('#l-save').style.display=batt.saver?'none':'';
+  chargeTick();
   return txt;
+}
+/* While the charger OSD is up the pack really does fill: slow, honest, one percent at a time. */
+let chgT=0;
+function chargeTick(){
+  clearInterval(chgT);chgT=0;
+  if(!batt.w)return;
+  chgT=setInterval(()=>{
+    if(!batt.w||cur!=='chg'){return}
+    batt.pct=Math.min(100,batt.pct+(batt.w>=45?.9:.35));
+    const p=Math.round(batt.pct), cb=$('#c-bat');
+    cb.style.setProperty('--p',p);
+    if(!cuRaf){const el=$('#c-pct');el.textContent=p+'%';el.classList.remove('tick');void el.offsetWidth;el.classList.add('tick')}
+    $('#l-bat').style.setProperty('--p',p);$('#l-pct').textContent=p+'%';
+    if(p>=100){clearInterval(chgT);chgT=0;renderBatt()}
+  },2000);
 }
 $('#l-save').onclick=e=>{e.stopPropagation();batt.saver=true;renderBatt();show('lowbat');clearTimeout(tDismiss);tDismiss=setTimeout(expireNow,1800);log('<b>Battery saver</b> on → estimated time recalculated')};
 [['Volume','vol',1800],['Brightness','bri',1800],['Charger 65 W','chg',3400,65],['Slow charger','chg',3800,10],['Unplug','chg',2800,0],['Low battery','lowbat',5000],['Next event','event',6000],['Screenshot','shot',0]].forEach(([l,id,ms,w])=>{

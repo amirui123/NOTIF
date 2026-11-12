@@ -96,11 +96,22 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   await wait(2000);
   btn('#b-sys button',/Low battery/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(300);
   ok('low battery → hazard battery',state()==='lowbat'&&!!d.querySelector('#l-bat.low i'),state());
+  ok('low battery cell has segment ticks',d.querySelectorAll('#l-bat .segs').length===1&&d.querySelector('#l-bat').style.getPropertyValue('--p')!=='',d.querySelector('#l-bat').style.getPropertyValue('--p')+'%');
 
-  await wait(5200);          // the low-battery card owns the island for 5 s
+  click('#l-save'); await wait(400);
+  ok('saver cools the alarm to amber',d.querySelector('#s-lowbat').classList.contains('saver'),'saver='+d.querySelector('#s-lowbat').classList.contains('saver'));
+
+  await wait(2400);          // the saver card owns the island for 1.8 s
   btn('#b-sys button',/65 W/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(300);
   await wait(700);           // let the count-up finish
   ok('charging → hero capsule',state()==='chg'&&!!d.querySelector('#c-bat.chg')&&/%$/.test(d.querySelector('#c-pct').textContent),state()+' · '+d.querySelector('#c-pct').textContent);
+  const cg=d.querySelector('#s-chg');
+  ok('65 W → fast charge motion',cg.dataset.mode==='fast'&&!!cg.querySelector('.bat .edge')&&cg.querySelectorAll('.ions i').length===4,cg.dataset.mode+' · '+cg.querySelectorAll('.ions i').length+' ions');
+
+  await wait(3200);
+  btn('#b-sys button',/Slow charger/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(400);
+  ok('10 W → patient amber mode',d.querySelector('#s-chg').dataset.mode==='slow',d.querySelector('#s-chg').dataset.mode);
+  await wait(4000);
 
   // ---- the same care applied to the other surfaces ----
   await wait(3400);                                   // let the charging capsule finish

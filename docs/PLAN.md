@@ -24,13 +24,14 @@
       حلقه‌ی ضبط، انفجار «ارسال شد»، ریل کارت اولویت، صفحه‌ی گرامافون، فوکوس کامپوزر
 - [x] مدل v5: بردار زمینه (۱۱ سیگنال) + آستانه‌های متحرک + خستگی/پذیرش + تصمیم قابل توضیح
 - [x] `test_context.js` — ۱۲ بررسی زمینه‌ای · `ui-scenario.js` — ۲۰/۲۰
+- [x] باتری/شارژ: سیستم انرژی کامل (یون، لبه‌ی شارژ، حالت واتاژ، ضربان قلب، Saver) · ۲۵/۲۵
 
 ## تست
 ```bash
 node IslandX-Model/test_engine.js    # 19/21 · 2 known gap
 node IslandX-Model/test_context.js   # 12/12 · سیاست زمینه
 node IslandX-Model/eval_engine.js    # ارزیابی int8 روی تست‌ست‌های واقعی
-node tests/ui-scenario.js            # 20/20 · 0 runtime error
+node tests/ui-scenario.js            # 25/25 · 0 runtime error
 ```
 
 ## آرشیو دستور قبلی
