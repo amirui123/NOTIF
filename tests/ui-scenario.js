@@ -82,6 +82,26 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   click('#reset'); await wait(150);
   ok('reset clears learning',/reset/i.test(log()));
 
+  // ---- system OSDs each have their own language ----
+  await wait(1200);
+  btn('#b-sys button',/^Volume/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(300);
+  const bars=d.querySelectorAll('#vol-lad i').length, lit=d.querySelectorAll('#vol-lad i.on').length;
+  ok('volume → segment ladder',state()==='vol'&&bars===14&&lit===9,bars+' bars · '+lit+' lit');
+
+  await wait(2000);
+  btn('#b-sys button',/^Brightness/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(300);
+  const bv=parseFloat(d.querySelector('#s-bri').style.getPropertyValue('--v'));
+  ok('brightness → warm beam',state()==='bri'&&bv>60,'level '+bv);
+
+  await wait(2000);
+  btn('#b-sys button',/Low battery/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(300);
+  ok('low battery → hazard battery',state()==='lowbat'&&!!d.querySelector('#l-bat.low i'),state());
+
+  await wait(5200);          // the low-battery card owns the island for 5 s
+  btn('#b-sys button',/65 W/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(300);
+  await wait(700);           // let the count-up finish
+  ok('charging → hero capsule',state()==='chg'&&!!d.querySelector('#c-bat.chg')&&/%$/.test(d.querySelector('#c-pct').textContent),state()+' · '+d.querySelector('#c-pct').textContent);
+
   // persistence
   const ls={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);ls[k]=1}
   ok('persists small state',Object.keys(ls).length>0,Object.keys(ls).join(','));

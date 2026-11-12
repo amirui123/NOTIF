@@ -386,6 +386,69 @@ body.playing #s-line::before{--hg:var(--tc)}
 #s-chg:not(.plug).on>.bat{animation:unp .55s cubic-bezier(.3,1.5,.4,1) backwards}
 @keyframes unp{0%{opacity:0;transform:translateX(-8px)}}
 @media (prefers-reduced-motion:reduce){#s-line::before,.flow i,#s-chg .trace,#s-chg::before,#s-chg .bat.chg i{animation:none!important}}
+
+/* ===== v11: every system OSD gets its own visual language ===== */
+/* The pill itself takes the tint of whatever it is showing, so you recognise the state from
+   the shape and the colour before you read anything. */
+#island[data-s=vol]{background-image:radial-gradient(130% 180% at 0% 50%,rgba(139,92,246,.22),transparent 62%),linear-gradient(180deg,#15121d,#0c0a12)}
+#island[data-s=bri]{background-image:radial-gradient(130% 180% at 0% 50%,rgba(251,191,36,.20),transparent 62%),linear-gradient(180deg,#1a1519,#0f0b10)}
+#island[data-s=chg]{background-image:radial-gradient(130% 200% at 0% 50%,rgba(52,211,153,.20),transparent 64%),linear-gradient(180deg,#101a17,#090f0d)}
+#island[data-s=lowbat]{background-image:radial-gradient(130% 200% at 0% 50%,rgba(248,113,113,.24),transparent 64%),linear-gradient(180deg,#1b1010,#100a0a)}
+
+/* --- volume: a discrete segment ladder, not a bar with a handle --- */
+#s-vol{width:226px;padding:0 12px 0 13px;gap:11px}
+#s-vol .sl,#s-bri .sl{height:26px}
+#s-vol .tr,#s-bri .tr{height:100%;background:none;border-radius:0}
+#s-vol .tr>.fi,#s-vol .tr>.th,#s-bri .tr>.fi,#s-bri .tr>.th{display:none}
+.lad{position:absolute;inset:0;display:flex;align-items:center;gap:2.5px}
+.lad i{flex:1;height:var(--h,12px);border-radius:1.5px;background:rgba(255,255,255,.13);
+  transition:background .16s ease,box-shadow .16s ease,transform .2s cubic-bezier(.3,1.6,.4,1);transform-origin:50% 50%}
+.lad i.on{background:linear-gradient(180deg,#C4B5FD,#8B5CF6);box-shadow:0 0 7px rgba(167,139,250,.55)}
+.lad i.on:nth-child(n+9){background:linear-gradient(180deg,#A5F3FC,#22D3EE);box-shadow:0 0 7px rgba(34,211,238,.5)}
+#s-vol .val{width:22px}
+#s-vol #i-vol{color:#C4B5FD;transition:transform .22s cubic-bezier(.3,1.7,.4,1),color .2s}
+#s-vol.quiet #i-vol{color:var(--bad)}
+#s-vol .sl:active .lad i.on{transform:scaleY(1.12)}
+
+/* --- brightness: one continuous beam of warm light --- */
+#s-bri{width:226px;padding:0 12px 0 13px;gap:11px}
+#s-bri .tr{position:relative;height:6px;background:rgba(255,255,255,.09);border-radius:3px;overflow:visible}
+.beam{position:absolute;left:0;top:0;bottom:0;width:calc(var(--v,72)*1%);border-radius:3px;
+  background:linear-gradient(90deg,rgba(255,183,77,.35),#FFB74D 55%,#FFE0A3);
+  box-shadow:0 0 14px rgba(255,183,77,.55),0 0 3px rgba(255,224,163,.9);
+  transition:width .28s cubic-bezier(.22,1,.3,1),box-shadow .3s}
+.beam i{position:absolute;right:-3px;top:50%;width:9px;height:9px;margin-top:-4.5px;border-radius:50%;
+  background:#FFF3D6;box-shadow:0 0 10px rgba(255,183,77,.95),0 0 22px rgba(255,183,77,.5)}
+#s-bri .val{width:22px;color:#FFD9A0}
+#s-bri #i-bri{color:#FFC46B;transition:transform .5s cubic-bezier(.22,1,.3,1),color .25s}
+#island[data-s=bri] .st.on #i-bri{transform:rotate(calc(var(--v,72)*2.7deg))}
+#s-bri::before{content:"";position:absolute;left:0;top:0;bottom:0;width:44%;pointer-events:none;
+  background:radial-gradient(60% 120% at 0% 50%,rgba(255,183,77,.16),transparent 70%);opacity:calc(var(--v,72)/100)}
+
+/* --- charging: the battery capsule is the hero --- */
+#s-chg{gap:9px}
+#s-chg .bat{width:38px;height:16px;border-radius:6px;background:rgba(52,211,153,.10);
+  box-shadow:inset 0 0 0 1px rgba(52,211,153,.35),0 0 16px -4px rgba(52,211,153,.5)}
+#s-chg .bat::after{top:5px;height:6px;background:rgba(52,211,153,.55)}
+#s-chg .bat i{background:linear-gradient(180deg,#6EE7B7,#34D399 55%,#10B981);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 0 10px rgba(52,211,153,.55)}
+#s-chg .bat.chg i::after{animation-duration:1.25s}
+#s-chg #c-pct{font-size:14px;letter-spacing:-.01em}
+#s-chg.plug #c-pct{color:#6EE7B7}
+
+/* --- low battery: hazard stripes + a slow breath --- */
+#s-lowbat .bat.low{background:rgba(248,113,113,.10);
+  box-shadow:inset 0 0 0 1px rgba(248,113,113,.55),0 0 16px -5px rgba(248,113,113,.7)}
+#s-lowbat .bat.low i{background:repeating-linear-gradient(45deg,#F87171 0 4px,#7F1D1D 4px 8px);
+  animation:haz 1.6s linear infinite}
+@keyframes haz{to{background-position:11px 0}}
+#s-lowbat.on{animation:breath 2.6s ease-in-out infinite}
+@keyframes breath{50%{box-shadow:0 0 22px -6px rgba(248,113,113,.55)}}
+#s-lowbat #l-pct{text-shadow:0 0 12px rgba(248,113,113,.5)}
+#s-lowbat .pb{background:rgba(248,113,113,.16);color:#FCA5A5;box-shadow:inset 0 0 0 1px rgba(248,113,113,.3)}
+@media (prefers-reduced-motion:reduce){
+  #s-lowbat .bat.low i,#s-lowbat.on{animation:none!important}
+}
 </style>
 </head>
 <body>
@@ -446,8 +509,8 @@ body.playing #s-line::before{--hg:var(--tc)}
 
     <div class="st" id="s-prev"><div class="th"></div><div style="flex:1;line-height:1.35"><div class="b">Copied <span data-i="check" style="color:var(--ok);display:inline-block;vertical-align:-3px"></span></div><div class="xs t2 num">1284 × 806 · 318 KB</div></div><span class="ib" data-i="download" title="Save as"></span><span class="ib" data-i="pen" title="Edit"></span><span class="ib" data-i="trash" title="Delete"></span></div>
 
-    <div class="st" id="s-vol"><span data-i="speaker" id="i-vol" class="t2"></span><div class="sl" data-sl="vol" data-v="64"><div class="tr"><div class="fi"></div><div class="th"></div></div></div><span class="val num">64</span></div>
-    <div class="st" id="s-bri"><span data-i="sun" id="i-bri" class="t2"></span><div class="sl" data-sl="bri" data-v="72"><div class="tr"><div class="fi"></div><div class="th"></div></div></div><span class="val num">72</span></div>
+    <div class="st" id="s-vol"><span data-i="speaker" id="i-vol" class="t2"></span><div class="sl" data-sl="vol" data-v="64"><div class="tr"><span class="lad" id="vol-lad"></span><div class="fi"></div><div class="th"></div></div></div><span class="val num">64</span></div>
+    <div class="st" id="s-bri"><span data-i="sun" id="i-bri" class="t2"></span><div class="sl" data-sl="bri" data-v="72"><div class="tr"><span class="beam"><i></i></span><div class="fi"></div><div class="th"></div></div></div><span class="val num">72</span></div>
 
     <div class="st" id="s-chg"><i class="trace"></i><span class="cg" data-i="bolt"></span><span class="flow"><i></i><i></i><i></i></span><div class="bat" id="c-bat"><i></i></div><span class="b num" id="c-pct"></span><span class="t2 xs num" id="c-txt"></span></div>
     <div class="st" id="s-dual"><div class="art"></div><canvas id="viz2"></canvas><i class="dsep"></i><svg class="pring" width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" class="pt"/><circle cx="9" cy="9" r="7" class="pr" data-c="43.98" stroke-dasharray="43.98" transform="rotate(-90 9 9)"/></svg><span class="num" data-timer></span></div>
@@ -965,7 +1028,12 @@ function vframe(now){
 function vizKick(){if(!vraf&&(cur==='music'||cur==='musicx'||cur==='dual')){vlast=performance.now();vraf=requestAnimationFrame(vframe)}}
 function setSl(sl,v){v=Math.max(0,Math.min(100,v));sl.dataset.v=v;$('.fi',sl).style.width=v+'%';$('.th',sl).style.left=v+'%';const k=sl.dataset.sl;
   if(k==='seek')$('#el').textContent=fmt(TR[ti].dur*v/100);
-  else{sl.parentElement.querySelector('.val').textContent=Math.round(v);setIco($(k==='vol'?'#i-vol':'#i-bri'),k==='vol'?'speaker':'sun',v)}}
+  else{sl.parentElement.querySelector('.val').textContent=Math.round(v);setIco($(k==='vol'?'#i-vol':'#i-bri'),k==='vol'?'speaker':'sun',v)}
+  const st=sl.closest('.st');
+  if(st){st.style.setProperty('--v',v.toFixed(1));if(k==='vol')st.classList.toggle('quiet',v<1)}
+  if(k==='vol'){const lad=$('.lad',sl);if(lad){const n=lad.children.length;for(let i=0;i<n;i++)lad.children[i].classList.toggle('on',v>=(i+.5)*100/n)}}}
+/* volume ladder: fixed bar heights, lit up to the current level */
+(function(){const lad=$('#vol-lad');if(lad)lad.innerHTML=[9,14,19,12,22,16,11,20,15,23,13,18,10,16].map(h=>`<i style="--h:${h}px"></i>`).join('')})();
 setTrack(0,true);
 $$('.sl').forEach(sl=>{setSl(sl,+sl.dataset.v);const mv=e=>{const r=$('.tr',sl).getBoundingClientRect();setSl(sl,(e.clientX-r.left)/r.width*100)};
   sl.addEventListener('pointerdown',e=>{sl.setPointerCapture(e.pointerId);mv(e);sl.onpointermove=mv});sl.addEventListener('pointerup',()=>sl.onpointermove=null)});
