@@ -94,7 +94,7 @@ body.playing:not(.fs) #glow{opacity:.5;animation:bass 1.1s ease-in-out infinite}
 #s-reply{width:330px;padding:8px 8px 10px 12px}
 #s-reply .inp{display:flex;align-items:center;height:32px;border-radius:99px;padding:0 2px 0 12px;background:rgba(139,92,246,.08);box-shadow:inset 0 0 0 1px rgba(139,92,246,.5);margin:4px 4px 8px 0}
 #s-reply input{flex:1;background:none;border:0;outline:0;color:var(--t1);font:12px inherit;font-family:inherit;min-width:0}
-.chip{height:22px;padding:0 9px;border-radius:99px;font-size:10.5px;display:inline-flex;align-items:center;box-shadow:inset 0 0 0 1px var(--line2);color:var(--t2);cursor:pointer}
+.chip{height:24px;padding:0 9px;border-radius:99px;font-size:10.5px;display:inline-flex;align-items:center;box-shadow:inset 0 0 0 1px var(--line2);color:var(--t2);cursor:pointer}
 .chip:hover{color:var(--t1)}
 #s-shot{height:40px;padding:0 6px;gap:4px}
 #s-shot .sg{height:28px;padding:0 11px;border-radius:99px;display:flex;align-items:center;gap:6px;color:var(--t2);cursor:pointer;font-size:11.5px}
@@ -309,7 +309,7 @@ body.playing:not(.fs) #glow{opacity:.3;animation:bass2 1.4s ease-in-out infinite
 #s-pcard{width:330px;height:48px;padding:0 9px;gap:10px}
 .pci{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:var(--ph);background:color-mix(in srgb,var(--ph) 20%,transparent)}
 #s-pcard.on .pci{animation:pop .7s cubic-bezier(.3,1.6,.4,1) .06s backwards}
-#s-pcard .chip{height:28px;padding:0 10px}
+#s-pcard .chip{height:24px;padding:0 10px}
 
 /* ===== v9: pomodoro polish ===== */
 .dg{display:inline-block}
@@ -712,7 +712,7 @@ body.playing #s-line::before{--hg:var(--tc)}
 #px-i{padding-right:26px}
 #s-pset{width:324px;padding:8px 10px 10px}
 .psg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;margin-top:4px}
-.psc .ib.sm{width:22px;height:22px;flex:none}.psc{overflow:hidden;display:flex;align-items:center;gap:1px;height:32px;padding:0 4px 0 9px;border-radius:11px;background:rgba(255,255,255,.045);box-shadow:inset 0 0 0 1px var(--line)}
+.psc .ib.sm{width:22px;height:22px;flex:none}.psc{overflow:hidden;display:flex;align-items:center;gap:1px;height:30px;padding:0 4px 0 9px;border-radius:11px;background:rgba(255,255,255,.045);box-shadow:inset 0 0 0 1px var(--line)}
 .psc b{min-width:42px;white-space:nowrap;text-align:center;font-size:12px;display:inline-block}
 .psc b.roll{animation:roll .35s cubic-bezier(.16,1,.3,1)}
 .psc.dim b{color:var(--vl)}
@@ -832,7 +832,7 @@ body:not(.playing) #s-musicx .art{filter:saturate(.5) brightness(.75)}
     </div>
 
     <div class="st col" id="s-reply">
-      <div class="row" style="height:26px"><span class="mav" id="r-av"></span><b id="r-from" style="margin-left:7px"></b><span class="t3 xs" id="r-app" style="margin-left:6px"></span><span class="sp"></span><span class="ib" id="r-x" data-i="x"></span></div>
+      <div class="row" style="height:28px"><span class="mav" id="r-av"></span><b id="r-from" style="margin-left:7px"></b><span class="t3 xs" id="r-app" style="margin-left:6px"></span><span class="sp"></span><span class="ib" id="r-x" data-i="x"></span></div>
       <div class="rq ell" id="r-q" dir="auto"></div>
       <div class="inp"><input id="rin" placeholder="Reply…" spellcheck="false" dir="auto"><span class="ib pri off" id="r-send" data-i="send"></span></div>
       <div class="row" id="r-chips" style="gap:5px"></div>
