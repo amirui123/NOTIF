@@ -20,9 +20,18 @@ public partial class App : Application
         _instance = new Mutex(true, @"Local\IslandX.Windows.Experimental", out _ownsMutex);
         if (!_ownsMutex) { Shutdown(); return; }
 
-        _window = new MainWindow();
-        _prototype = new PrototypeWindow();
-        _overlay = new OverlayWindow();
+        try
+        {
+            _window = new MainWindow();
+            _prototype = new PrototypeWindow();
+            _overlay = new OverlayWindow();
+        }
+        catch (Exception ex)
+        {
+            try { System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IslandX-startup-error.txt"), ex.ToString()); } catch (Exception) { }
+            MessageBox.Show("IslandX could not start. Please report this error: " + ex.Message, "IslandX", MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown(1); return;
+        }
         MainWindow = _overlay;
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Show island", null, (_, _) => _overlay.ShowIsland());

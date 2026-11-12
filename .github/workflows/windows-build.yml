@@ -29,7 +29,12 @@ jobs:
           try {
             Start-Sleep -Seconds 8
             $process.Refresh()
-            if ($process.HasExited) { throw "IslandX exited during startup with code $($process.ExitCode)" }
+            if ($process.HasExited) {
+              $detail = Join-Path $env:TEMP 'IslandX-startup-error.txt'
+              if (Test-Path $detail) { $text = (Get-Content $detail -Raw) -replace "`r|`n", ' '; Write-Output "::error title=Startup details::$text" }
+              Write-Output "::error title=Startup exit::Exit code $($process.ExitCode)"
+              throw "IslandX exited during startup with code $($process.ExitCode)"
+            }
           }
           finally {
             if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
