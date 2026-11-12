@@ -20,6 +20,19 @@ jobs:
         run: dotnet build IslandX-Windows/IslandX.Windows.csproj --configuration Release
       - name: Publish standalone preview
         run: dotnet publish IslandX-Windows/IslandX.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true --output out/IslandX-Windows
+      - name: Smoke-test startup on Windows
+        shell: pwsh
+        run: |
+          $app = Join-Path $PWD 'out/IslandX-Windows/IslandX.Windows.exe'
+          $process = Start-Process -FilePath $app -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            $process.Refresh()
+            if ($process.HasExited) { throw "IslandX exited during startup with code $($process.ExitCode)" }
+          }
+          finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
       - name: Upload experimental build (not a release)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
