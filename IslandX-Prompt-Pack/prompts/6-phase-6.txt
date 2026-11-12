@@ -1,0 +1,10 @@
+PHASE 6 — System HUDs and indicators (all event-driven).
+
+1. Volume (reference "Volume"): speaker icon (changes with level/mute), smooth glow slider, numeric value. Use Core Audio (IAudioEndpointVolume + IAudioEndpointVolumeCallback) for events; allow dragging the slider to change volume (focus-less). Also react to default device changes; show device name on hover.
+2. Brightness (reference "Brightness"): sun icon, slider, value. Read/set via WMI (WmiMonitorBrightness / WmiMonitorBrightnessMethods) with WmiMonitorBrightnessEvent watcher; for external monitors try DDC/CI (dxva2) as optional, silently skip if unsupported.
+3. Charger connected (reference "Charging"): plug icon bubble, "Charging", "1 h 12 min until full", battery glyph with percent and animated fill. Use SystemEvents.PowerModeChanged / Windows.Devices.Power.Battery.ReportUpdated (no polling).
+4. Low battery (reference "Low battery"): thresholds 20% and 10% (configurable), red/pink danger tint but still in the dark theme, big percent, "Connect your charger", buttons "Battery settings" (ms-settings:batterysaver) and "Turn on battery saver".
+5. Camera & microphone in use (reference): detect via registry ConsentStore (HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\{webcam,microphone} + NonPackaged subkeys, LastUsedTimeStop == 0 means in use). Use RegNotifyChangeKeyValue (no polling). Show green Camera chip and orange Mic chip, device names, using-app names, "Privacy settings" link. While active, show a tiny colored dot in the idle pill too.
+6. Optional extras: Caps Lock / Num Lock indicator, Bluetooth device connected (with battery %), Wi-Fi/VPN connected, USB device connected, Focus Assist/DND changes, clipboard history peek (opt-in), download finished.
+
+Done criteria: each HUD triggers from the real system event, within ~100ms, auto-dismisses correctly, and idle CPU stays ≈ 0.

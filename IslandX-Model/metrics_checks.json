@@ -1,0 +1,27 @@
+{
+ "parity_max_abs_diff": 0.000016,
+ "text: personal messages NOT flagged as unwanted": "16/16",
+ "text: promotions flagged as unwanted": "12/12",
+ "text: scams flagged as unwanted": "11/11",
+ "text: scams recognised as type \"scam\"": "11/11",
+ "text: codes / receipts NOT flagged as scam or promo": "8/8",
+ "failed_examples": {
+  "personal": [],
+  "promo": [],
+  "scam_unwanted": [],
+  "scam_type": [],
+  "trans": []
+ },
+ "policy: login codes are always shown (also in full-screen)": "5/5",
+ "policy: scams are never promoted": "11/11",
+ "full-screen lowers the score of ordinary messages": "16/16",
+ "a known contact scores at least as high as an unknown one": "16/16",
+ "promotion from the same sender scores lower than a personal message": "12/12",
+ "adding \"urgent\" / \"فوری\" does not lower the score": "16/16",
+ "learning": {
+  "3 dismissals": "0.28 -> 0.03",
+  "3 opens of a promo sender": "0.01 -> 0.80"
+ },
+ "latency_ms_per_notification": 0.38,
+ "model_size_kb": 558
+}

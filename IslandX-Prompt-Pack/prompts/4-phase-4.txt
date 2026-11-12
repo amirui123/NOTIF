@@ -1,0 +1,16 @@
+PHASE 4 — Media player with audio-reactive visualizer.
+
+1. Use GlobalSystemMediaTransportControlsSessionManager (SMTC): current session, playback status, title, artist, album, thumbnail, timeline (position/duration), source app name (e.g., Spotify), subscribe to events (MediaPropertiesChanged, PlaybackInfoChanged, TimelinePropertiesChanged, CurrentSessionChanged). Handle multiple sessions (choose the actively playing one; allow switching).
+2. Compact state (reference "Music, compact"): small pill with rounded album art, title + artist (marquee scrolling when too long), pause icon, and a mini 3-bar live visualizer. When a tab/song is playing and nothing else is happening, the island automatically shows this compact pill and stays out of the way.
+3. Expanded state (reference "Music, expanded"): large art with rounded corners, title, "artist — album", source app badge, 4-ish bar visualizer top-right, seek bar with elapsed/remaining time (draggable, smooth), prev / play-pause (large violet-glow circular button) / next. Hover-expand (500 ms dwell) also opens this when music is active.
+4. Visualizer ("رقص نور"): 
+   - Capture system audio via WASAPI loopback (NAudio), 1024/2048-point FFT, 16–32 log-spaced bands, smoothing with attack/release envelopes, peak-hold.
+   - Render as rounded vertical bars (compact: 3 bars; expanded: more bars or a soft waveform) with violet gradient, glow, and color tinted from the album art's dominant color (fallback violet).
+   - Subtle ambient glow behind the island that pulses to bass (very cheap: animated opacity of a pre-rendered radial gradient).
+   - Cap at 30 fps, start capture ONLY when playback is "Playing" AND island is visible; stop completely when paused/hidden (zero CPU). Use pooled buffers, no per-frame allocations.
+   - Fallback when loopback is unavailable: synthetic, gentle bars driven by playback state.
+5. Album art: cached, downscaled to the needed size, decoded off the UI thread.
+6. Optional: synced lyrics line (LRCLIB API, opt-in, cached) shown under the title in expanded view.
+7. Media keys / hover scroll wheel to change volume of the island's session.
+
+Done criteria: playing Spotify/YouTube in Chrome shows the compact pill with live bars; hovering 500 ms expands to the full player; controls work; pausing drops CPU to ~0.

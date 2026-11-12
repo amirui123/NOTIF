@@ -1,0 +1,12 @@
+<Window x:Class="IslandX.Windows.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="IslandX overlay (experimental)" Width="180" Height="70"
+        WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" WindowStartupLocation="Manual">
+  <Grid Background="#01000000">
+    <wv2:WebView2CompositionControl x:Name="View" />
+    <TextBlock x:Name="Failure" Visibility="Collapsed" Text="IslandX: WebView2 unavailable" Background="#CC171717" Foreground="White" TextWrapping="Wrap" FontSize="11"/>
+  </Grid>
+</Window>

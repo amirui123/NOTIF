@@ -1,0 +1,14 @@
+PHASE 5 — Screenshot tool integrated into the island.
+
+1. Trigger: hover panel "Screenshot" button AND a global hotkey via RegisterHotKey (default Ctrl+Alt+S, configurable). NOTE: Win+Shift+S is reserved by Windows and can't be registered; offer an optional button that launches the system snipper through `ms-screenclip:` as an alternative, but the main flow must be our own.
+2. Capture picker UI (reference "Screenshot" state): title "Capture", close X, three segmented options: Full screen / Region / Window, a footer line with Delay (off/3s/5s/10s), save folder (Pictures\Screenshots), cursor hidden/shown toggle.
+3. Engine: use Windows.Graphics.Capture (or DXGI Desktop Duplication) for high-quality, DPI-correct, multi-monitor capture. 
+   - Full screen: current monitor (or all).
+   - Region: freeze the screen into a dim overlay on all monitors (lightweight, one borderless window per monitor), crosshair, live size indicator "1284 × 806", drag/resize handles, Esc to cancel, Enter to confirm.
+   - Window: highlight window under cursor (DWM extended frame bounds, include rounded corners/shadow optionally), click to capture.
+   - The island itself must never appear in the screenshot.
+4. After capture: copy PNG to clipboard immediately, save as `Screenshot yyyy-MM-dd HHmmss.png`, then show the "Screenshot preview" state (thumbnail, filename, dimensions, file size, "Copied to clipboard" check, buttons: Save as…, Edit, Undo/Delete). Drag the thumbnail directly into other apps (drag & drop file).
+5. Edit: a simple built-in annotation overlay (arrow, rectangle, highlighter, blur/pixelate, text, crop) in the same dark style; "Copy" and "Save" at the end. Keep it lightweight (no big libraries).
+6. Extras: optional OCR "Copy text" using Windows.Media.Ocr (offline), auto-delete options, PNG optimization.
+
+Done criteria: pressing the hotkey or hovering → Screenshot works end-to-end for all three modes on multi-monitor, preview appears, clipboard is filled, file saved.

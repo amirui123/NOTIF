@@ -1,0 +1,17 @@
+PHASE 3 — Real notification capture (the core purpose of the app).
+
+1. Use Windows.UI.Notifications.Management.UserNotificationListener:
+   - Request access, handle Allowed/Denied/Unspecified gracefully with a friendly onboarding screen.
+   - Subscribe to NotificationChanged (event-driven, no polling). Read app name, app icon, title, body lines, timestamp, and sender avatar/image if available.
+   - NOTE: this API requires package identity. Solve it properly: create an MSIX **sparse package** (or single-project MSIX packaging) so the app has identity while remaining a normal WPF exe. Document the exact build/sign/install steps (self-signed dev cert script included).
+2. Map notifications to IncomingMessage state (see reference): avatar, app name + small app icon, bold sender/title, message body (max 2-3 lines, ellipsis), relative time ("now", "2m"), "Open app" button, and a reply input field.
+3. Notification Center inside HoverPanel: unread count badge, list of recent notifications grouped by app, swipe/click to dismiss, "clear all", history stored locally (SQLite or JSON, encrypted with DPAPI, retention configurable, can be disabled for privacy).
+4. Smart behavior: group multiple messages from the same sender, show "+3 more", skip duplicates, per-app rules (mute / priority / hide content for privacy), keyword rules (e.g. OTP codes get a one-click "Copy code" button — detect 4–8 digit codes).
+5. Original Windows toast banners will still appear — implement an onboarding step that explains how to disable banners per app (Settings → Notifications) while keeping notifications in Action Center so IslandX still receives them, and deep-link to ms-settings:notifications.
+6. QUICK REPLY — be honest and realistic: Windows does NOT allow third-party apps to invoke inline-reply on other apps' toasts via the listener. Implement:
+   a) "Open app" → activate the source app (via launch URI / AUMID / bring window to front).
+   b) Quick Reply best-effort using UI Automation to find the matching toast/Action Center item and invoke its reply box when it exists; if not possible, fall back to opening the app and copying the typed reply to clipboard with a toast "Reply copied". Mark this feature "Experimental" in settings. Quick chips: "On my way", "Running 10 min late", "Call you later" (editable). 
+   c) Reply UI must exactly follow the reference "Quick reply" state (header with name+app, close X, original message, input with Send button, chips below) in the dark-purple style. This UI is the ONLY state allowed to take keyboard focus (activate the window only while typing, then release focus back to the previous window).
+7. RTL/Persian support: correct rendering of Persian/Arabic text, bidi, proper fonts (Vazirmatn bundled optional, ~100KB subset) and auto text direction per message.
+
+Done criteria: sending a real Windows notification (e.g., from PowerShell BurntToast or a Telegram message) shows up on the island within ~200 ms with the correct app/sender/text.

@@ -1,0 +1,19 @@
+PHASE 8 — Settings, performance hardening, packaging.
+
+1. Settings window (dark-purple, same design system, Mica/Acrylic, keyboard accessible): General (startup with Windows, monitor, position offset, size scale), Appearance (accent color picker with violet default, opacity/blur, corner roundness, compact/large mode), Behavior (hover delay, auto-dismiss durations, priority order), Notifications (per-app rules, privacy: hide content, DND schedule), Music, Screenshot, Timer, Shortcuts, Languages, About + Check for updates (GitHub releases, optional).
+2. Settings stored in JSON (%LOCALAPPDATA%\IslandX), atomic writes, live-apply without restart.
+3. Performance audit (must report numbers in PROGRESS.md):
+   - Measure idle CPU, working set, handles, GC count with dotnet-counters / PerfView notes. 
+   - Targets: idle CPU < 0.5%, RAM < 90 MB, cold start < 1.2 s, island animation 60fps with < 6% CPU on a mid laptop.
+   - Enable: ReadyToRun, TieredPGO, `ServerGC=false`, `ConcurrentGarbageCollection=false`, trimming where safe, no unused assemblies, lazy-load heavy services (visualizer, OCR, screenshot editor) only on first use.
+   - Freeze Freezable objects, cache brushes/geometries, avoid BlurEffect on large areas (use pre-rendered gradients), RenderOptions bitmap scaling, set `RenderOptions.ProcessRenderMode` smartly.
+   - Pause all animations when the session is locked, the display is off, or the laptop is on battery saver (reduce visualizer to 20 fps).
+4. Robustness: handle monitor hot-plug, DPI changes, Explorer restart, sleep/resume, RDP sessions, Windows 10 vs 11 differences (rounded corners, Mica fallback).
+5. Security/privacy: no network except opted-in features, no telemetry, notification history encrypted, clear-data button.
+6. Packaging: 
+   - `dotnet publish -c Release -r win-x64 --self-contained false -p:PublishReadyToRun=true` (small, requires .NET 8 Desktop Runtime) AND a self-contained single-file variant.
+   - MSIX (sparse package for identity) + signing script, or an Inno Setup installer that registers the sparse package and a startup entry.
+   - Produce README.md (install, permissions, limitations, troubleshooting), LICENSE, and a CHANGELOG.
+7. Final QA checklist: run through all 16 reference states and verify each against the reference layout in the dark-purple theme; list any deviations.
+
+Done criteria: installer/portable build produced, all tests pass, performance numbers reported, final checklist all green.

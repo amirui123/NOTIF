@@ -1,0 +1,116 @@
+name: Windows experimental build
+on:
+  push:
+    paths:
+      - 'IslandX-Windows/**'
+      - 'IslandX-Prototype/index.html'
+      - '.github/workflows/windows-build.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build Windows preview
+        run: dotnet build IslandX-Windows/IslandX.Windows.csproj --configuration Release
+      - name: Publish standalone preview
+        run: dotnet publish IslandX-Windows/IslandX.Windows.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true --output out/IslandX-Windows
+      - name: Smoke-test startup on Windows
+        shell: pwsh
+        run: |
+          $app = Join-Path $PWD 'out/IslandX-Windows/IslandX.Windows.exe'
+          $process = Start-Process -FilePath $app -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            $process.Refresh()
+            if ($process.HasExited) {
+              $detail = Join-Path $env:TEMP 'IslandX-startup-error.txt'
+              if (Test-Path $detail) { $text = (Get-Content $detail -Raw) -replace "`r|`n", ' '; Write-Output "::error title=Startup details::$text" }
+              Write-Output "::error title=Startup exit::Exit code $($process.ExitCode)"
+              throw "IslandX exited during startup with code $($process.ExitCode)"
+            }
+          }
+          finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
+      - name: Test embedded prototype in WebView2
+        shell: pwsh
+        run: |
+          $app = Join-Path $PWD 'out/IslandX-Windows/IslandX.Windows.exe'
+          $process = Start-Process -FilePath $app -ArgumentList '--smoke-test' -PassThru
+          if (-not $process.WaitForExit(45000)) { Stop-Process -Id $process.Id -Force; throw 'WebView2 smoke test timed out' }
+          $process.Refresh()
+          if ($process.ExitCode -ne 0) { throw "Prototype smoke test failed with code $($process.ExitCode)" }
+      - name: Test native overlay startup and embedded DOM
+        shell: pwsh
+        run: |
+          $app = Join-Path $PWD 'out/IslandX-Windows/IslandX.Windows.exe'
+          $process = Start-Process -FilePath $app -ArgumentList '--overlay-smoke-test' -PassThru
+          if (-not $process.WaitForExit(45000)) { Stop-Process -Id $process.Id -Force; throw 'Overlay test timed out' }
+          $process.Refresh()
+          if ($process.ExitCode -ne 0) { throw "Overlay test failed with code $($process.ExitCode)" }
+      - name: Build and test installer
+        shell: pwsh
+        run: |
+          trap { Write-Output "::error title=Installer test::$($_.Exception.Message)"; exit 1 }
+          Copy-Item IslandX-Windows/README.md out/IslandX-Windows/README.md
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw 'Inno Setup 6 is missing from the runner' }
+          $compileLog = & $iscc IslandX-Windows/installer/IslandX.iss 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0) { Write-Output "::error title=Inno Setup::$($compileLog -replace "`r|`n", ' ')"; throw 'Installer compilation failed' }
+          $installDir = Join-Path $env:RUNNER_TEMP 'IslandX-install-test'
+          $setup = Join-Path $PWD 'out/IslandX-Setup-preview-win-x64.exe'
+          $install = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer failed: $($install.ExitCode)" }
+          $installedApp = Join-Path $installDir 'IslandX.Windows.exe'
+          if (-not (Test-Path $installedApp)) { throw 'Installed executable missing' }
+          $process = Start-Process -FilePath $installedApp -ArgumentList '--overlay-smoke-test' -PassThru
+          if (-not $process.WaitForExit(45000)) { Stop-Process -Id $process.Id -Force; throw 'Installed app test timed out' }
+          $process.Refresh()
+          if ($process.ExitCode -ne 0) { throw "Installed app test failed: $($process.ExitCode)" }
+          $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+          New-Item -Path $runKey -Force | Out-Null
+          Set-ItemProperty -Path $runKey -Name IslandXExperimental -Value "`"$installedApp`""
+          $uninstaller = Join-Path $installDir 'unins000.exe'
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstall failed: $($uninstall.ExitCode)" }
+          if (Test-Path $installedApp) { throw 'Executable remains after uninstall' }
+          if ((Get-ItemProperty -Path $runKey -Name IslandXExperimental -ErrorAction SilentlyContinue).IslandXExperimental) { throw 'Startup entry remains after uninstall' }
+      - name: Upload experimental build (not a release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: IslandX-Windows-experimental-win-x64
+          path: |
+            out/IslandX-Windows/
+            out/IslandX-Setup-preview-win-x64.exe
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish clearly labelled preview release
+        if: startsWith(github.event.head_commit.message, 'Publish preview')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Copy-Item IslandX-Windows/README.md out/IslandX-Windows/README.md
+          Copy-Item IslandX-Prototype/index.html out/IslandX-demo.html
+          Compress-Archive -Path out/IslandX-Windows/* -DestinationPath out/IslandX-preview-win-x64.zip
+          $notes = @'
+          **Experimental preview — not a finished product.**
+
+          The app starts an experimental topmost desktop island based on the original prototype. The Windows clock and battery percentage/plugged-in state are connected; charger wattage is not available. The tray menu opens the full demo and an early native panel. Notifications, media, fullscreen detection, and clipboard history are not integrated. The separately downloadable HTML file is the original standalone demo, with simulated system events.
+
+          **Requirements:** Windows 10 version 2004 or newer, x64, and Microsoft Edge WebView2 Runtime. The .NET runtime is bundled. The unsigned installer and app may trigger SmartScreen.
+
+          Download and run IslandX-Setup-preview-win-x64.exe to install for the current user; uninstall through Windows Settings. A portable ZIP is also available. Use the tray icon to reopen the island, open the demo, or exit. Startup is off unless explicitly enabled in the separate native panel. Uninstall removes the startup entry if it points to this installation.
+
+          Real-device visual, input, battery, startup, and security testing remain incomplete. Do not rely on this preview for important notifications or sensitive clipboard data. UI and behaviour may change substantially.
+          '@
+          $notes | Set-Content -Encoding utf8 out/release-notes.txt
+          gh release create v0.3.0-preview out/IslandX-Setup-preview-win-x64.exe out/IslandX-preview-win-x64.zip out/IslandX-demo.html --target $env:GITHUB_SHA --title "IslandX 0.3.0 — experimental installer" --notes-file out/release-notes.txt --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Could not publish preview release' }
