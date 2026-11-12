@@ -5,6 +5,7 @@
   "scripts": {
     "serve": "python3 -m http.server 8080 --bind 0.0.0.0 --directory IslandX-Prototype",
     "test": "node IslandX-Model/test_engine.js",
+    "test:context": "node IslandX-Model/test_context.js",
     "test:ui": "node tests/ui-scenario.js",
     "test:eval": "node IslandX-Model/eval_engine.js"
   },

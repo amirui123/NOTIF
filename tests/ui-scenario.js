@@ -102,6 +102,26 @@ const timer=()=>(d.querySelector('[data-timer]')||{}).textContent;
   await wait(700);           // let the count-up finish
   ok('charging → hero capsule',state()==='chg'&&!!d.querySelector('#c-bat.chg')&&/%$/.test(d.querySelector('#c-pct').textContent),state()+' · '+d.querySelector('#c-pct').textContent);
 
+  // ---- the same care applied to the other surfaces ----
+  await wait(3400);                                   // let the charging capsule finish
+  const ctxRow=d.querySelector('#brain .br.ctx');
+  ok('brain shows the context band',!!ctxRow&&/context/.test(ctxRow.textContent),(ctxRow?ctxRow.textContent.replace(/\s+/g,' ').trim():'').slice(0,80));
+
+  w.fillToast({from:'Shop',app:'Shop',body:'50% off everything this weekend!',c:'#FBBF24'});
+  const kPromo=d.querySelector('#s-toast').dataset.k;
+  w.fillToast({from:'Sara',app:'Telegram',body:'Are we still on for 1:30?',c:'#38BDF8'});
+  const kPers=d.querySelector('#s-toast').dataset.k;
+  ok('toast carries its type',kPromo==='promotional'&&kPers==='personal',kPromo+' / '+kPers);
+  ok('glance has a scan line',!!d.querySelector('#s-glance .scan'));
+
+  click('#b-ctx button[data-k=priv]'); await wait(300);
+  ok('camera/mic → recording rings',state()==='priv'&&d.querySelector('#island').dataset.s==='priv',state());
+  click('#b-ctx button[data-k=priv]'); await wait(2600);   // the recording OSD owns the island for 2.5 s
+
+  btn('#b-sys button',/Next event/).dispatchEvent(new w.MouseEvent('click',{bubbles:true})); await wait(400);
+  ok('event → calendar tile',state()==='event'&&!!d.querySelector('#s-event .tile'),state());
+  await wait(6200);
+
   // persistence
   const ls={};for(let i=0;i<w.localStorage.length;i++){const k=w.localStorage.key(i);ls[k]=1}
   ok('persists small state',Object.keys(ls).length>0,Object.keys(ls).join(','));
