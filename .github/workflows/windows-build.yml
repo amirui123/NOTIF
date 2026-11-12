@@ -42,6 +42,14 @@ jobs:
           if (-not $process.WaitForExit(45000)) { Stop-Process -Id $process.Id -Force; throw 'WebView2 smoke test timed out' }
           $process.Refresh()
           if ($process.ExitCode -ne 0) { throw "Prototype smoke test failed with code $($process.ExitCode)" }
+      - name: Test native overlay startup and embedded DOM
+        shell: pwsh
+        run: |
+          $app = Join-Path $PWD 'out/IslandX-Windows/IslandX.Windows.exe'
+          $process = Start-Process -FilePath $app -ArgumentList '--overlay-smoke-test' -PassThru
+          if (-not $process.WaitForExit(45000)) { Stop-Process -Id $process.Id -Force; throw 'Overlay test timed out' }
+          $process.Refresh()
+          if ($process.ExitCode -ne 0) { throw "Overlay test failed with code $($process.ExitCode)" }
       - name: Upload experimental build (not a release)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

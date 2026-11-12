@@ -12,6 +12,7 @@ public partial class App : Application
     private Forms.NotifyIcon? _tray;
     private MainWindow? _window;
     private PrototypeWindow? _prototype;
+    private OverlayWindow? _overlay;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -21,9 +22,11 @@ public partial class App : Application
 
         _window = new MainWindow();
         _prototype = new PrototypeWindow();
-        MainWindow = _prototype;
+        _overlay = new OverlayWindow();
+        MainWindow = _overlay;
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("Show prototype", null, (_, _) => _prototype.ShowPreview());
+        menu.Items.Add("Show island", null, (_, _) => _overlay.ShowIsland());
+        menu.Items.Add("Show prototype demo", null, (_, _) => _prototype.ShowPreview());
         menu.Items.Add("Show experimental native status", null, (_, _) => _window.ShowIsland());
         menu.Items.Add("Exit", null, (_, _) => Shutdown());
         _tray = new Forms.NotifyIcon
@@ -33,8 +36,9 @@ public partial class App : Application
             ContextMenuStrip = menu,
             Visible = true
         };
-        _tray.DoubleClick += (_, _) => _prototype.ShowPreview();
-        _prototype.Show();
+        _tray.DoubleClick += (_, _) => _overlay.ShowIsland();
+        if (Array.Exists(e.Args, a => a == "--smoke-test")) _prototype.Show();
+        else _overlay.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
