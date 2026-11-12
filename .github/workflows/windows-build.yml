@@ -75,6 +75,7 @@ jobs:
           $process.Refresh()
           if ($process.ExitCode -ne 0) { throw "Installed app test failed: $($process.ExitCode)" }
           $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+          New-Item -Path $runKey -Force | Out-Null
           Set-ItemProperty -Path $runKey -Name IslandXExperimental -Value "`"$installedApp`""
           $uninstaller = Join-Path $installDir 'unins000.exe'
           $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
