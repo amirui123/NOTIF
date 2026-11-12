@@ -699,7 +699,7 @@ function renderBrain(){
     return `<div class="br"><span class="ell"><span class="dot" style="display:inline-block;background:${s.c};margin-right:6px"></span>${s.from}</span><div class="bar"><i style="width:${p*100}%"></i></div><span class="num t2">${pc(p)}</span><span class="lv" style="color:${col}">${lv}</span></div>`}).join('');
 }
 function log(h){$('#log').innerHTML=h}
-$('#reset').onclick=()=>{MEM=freshMem();saveMem();dwell=450;renderHD();renderBrain();log('Learning reset to defaults.')};
+$('#reset').onclick=()=>{MEM=freshMem();saveMem();dwell=450;try{localStorage.removeItem('islandx-dwell')}catch(e){}renderHD();renderBrain();log('Learning reset to defaults.')};
 
 /* ================= dock ================= */
 SRC.forEach(s=>{const b=document.createElement('button');b.innerHTML=`<span class="dot" style="background:${s.c}"></span>${s.app==s.from?s.app+(s.otp?' code':' promo'):s.from}`;b.onclick=()=>notify(s);$('#b-notif').appendChild(b)});

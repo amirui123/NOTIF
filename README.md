@@ -19,6 +19,15 @@ python3 -m http.server 8080 --bind 0.0.0.0
 
 دمو شامل ۱۶ حالت جزیره است (Idle، Hover panel، Music compact/expanded، Incoming message، Quick reply، Screenshot، Screenshot preview، Volume، Brightness، Charging، Low battery، Pomodoro، Next event، Privacy indicator، Fullscreen mini) به‌همراه یک **داک شبیه‌ساز** که با آن می‌شود اعلان فرستاد، به آن واکنش داد (باز کردن / رد کردن / نادیده گرفتن) و رفتار مدل v4 را در پنل «What the island has learned» دید.
 
+## تست
+
+```bash
+node IslandX-Model/test_engine.js   # مدل متن (۹ کیس) + سیاست تصمیم (۱۲ کیس)
+node IslandX-Model/eval_engine.js   # ارزیابی موتور int8 روی تست‌ست‌های واقعی
+```
+
+هر دو تست، کد را از خودِ `index.html` برمی‌دارند — پس همیشه همان چیزی را می‌سنجند که منتشر می‌شود.
+
 ## مدل
 
 نگاه کنید به [`IslandX-Model/README.md`](IslandX-Model/README.md). اجرای زنجیره‌ی آموزش:
