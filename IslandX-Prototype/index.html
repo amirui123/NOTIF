@@ -395,6 +395,7 @@ snooze:'<circle cx="12" cy="13" r="7"/><path d="M9.8 10.600h4.400l-4.4 4.800h4.4
 warn:'<path class="d" d="M12 4.5 20.5 19h-17z"/><path d="M12 10v4"/><circle class="f" cx="12" cy="16.6" r=".9"/>',
 check:'<path d="M5.5 12.500l4.3 4.3 8.7-9.3"/>'};
 const ico=(n,v)=>`<svg class="i" viewBox="0 0 24 24">${typeof G[n]==='function'?G[n](v):G[n]}</svg>`;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 $$('[data-i]').forEach(e=>e.insertAdjacentHTML('afterbegin',ico(e.dataset.i)));
 const setIco=(el,n,v)=>{el.querySelector('svg').outerHTML=ico(n,v)};
@@ -494,6 +495,7 @@ function renderHD(){$('#hd').innerHTML=`Full-screen hover: cursor must rest <b>$
 /* ================= the learner =================
    Online logistic regression, trained on-device from the user's own reactions.
    click/reply = positive, dismiss = negative, ignore = weak negative. */
+/* === MODEL:START ===  (this block is executed verbatim by IslandX-Model/test_engine.js) */
 /* ===== IslandX attention model v4 — inference + on-device memory (port of IslandX-Model) ===== */
 const b64=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
 const sigm=z=>1/(1+Math.exp(-z));
@@ -567,17 +569,46 @@ function memLearn(n,y){
   MEM.events++;saveMem();
 }
 const isCode=n=>hasOtp(n)||(textModel(n.body).pt[1]>.6&&/\d{4,8}/.test(normalizeDigits(n.body)));
+/* --- safety: scam guard ------------------------------------------------------------------
+   The text model's "scam" class was trained mostly on English "you have won" bait, so Persian
+   and Finglish card/national-ID phishing came out as `promotional` and sailed straight through
+   as an ordinary promo toast. The guard is now multi-signal (behaviour + wording) instead of one
+   class probability. A trusted sender (a contact, or someone you have answered) is never flagged. */
+const SCAM={
+  cred:/کد ملی|شماره کارت|شماره حساب|رمز (اول|دوم|عبور|دینامیک|اینترنتی)|cvv2?|card ?number|password|passcode|\bssn\b|\bpin\b/i,
+  prize:/برنده|جایزه|قرعه|هدیه|\bwon\b|winner|prize|gift ?card|lottery|jackpot|\bbarande\b|\bjaye?ze\b|tabrik/i,
+  link:/(https?:\/\/|www\.)\S+|\b[\w-]{2,}\.(com|ir|net|org|co|me|ly|info|xyz|top|site|online)\b/i,
+  ask:/کلیک کنید|وارد لینک|لینک (زیر|بالا)|ارسال کنید|ثبت ?نام کنید|click (here|the link|below)|link (below|zir)|claim (now|your)|verify (now|your)|submit|click konid/i,
+  urgency:/مسدود|تعلیق|لغو حساب|غیرفعال|همین الان|فوری|urgent|suspended|blocked|deactivat|act now|final (notice|warning)/i,
+  money:/میلیون تومان|هزار تومان|تومان (جایزه|هدیه)|\$\s?\d|€\s?\d|\d+\s?(usd|eur)\b/i
+};
+const SCAM_AT=.6;                                            /* score at which we stop calling it a promo */
+const pctOf=v=>Math.round(v*100)+'%';
+function scamScore(n,tm){
+  const t=String((n&&n.body)||''), why=[];
+  let v=0;
+  if(tm.pt[3]>.5){v+=.55;why.push('class:scam')}
+  else if(tm.pt[3]>.25){v+=.25;why.push('class~'+pctOf(tm.pt[3]))}
+  if(tm.pu>.9){v+=.15;why.push('unwanted:'+pctOf(tm.pu))}
+  for(const k of ['cred','prize','link','ask','urgency','money'])if(SCAM[k].test(t)){
+    v+=k==='cred'?.45:k==='prize'?.3:k==='urgency'?.12:k==='money'?.1:.2;why.push(k)}
+  if(SCAM.cred.test(t)&&SCAM.prize.test(t)){v+=.15;why.push('cred+prize')}  /* an ID plus a reward is never legitimate */
+  return {v:Math.min(1,v),why:why.join(' · ')};
+}
 /* --- decision policy: expected utility with context-dependent costs + safety rules --- */
 function decide(n,p,C){
   const tm=textModel(n.body);
   if(C.dnd)return 'silent';
   const trusted=n.known||slot('s',n.app+'|'+n.from).e>0;     /* a contact, or someone you have answered before */
-  if(tm.pt[3]>.5&&!trusted)return 'scam';                    /* never promoted; listed with a warning */
+  const sc=scamScore(n,tm);
+  n._scamWhy=sc.why;n._scamScore=sc.v;
+  if(!trusted&&sc.v>=SCAM_AT)return 'scam';                  /* never promoted; listed with a warning */
   if(isCode(n))return 'show';                                /* login codes are always shown */
   const busy=C.fs||C.priv, cost=busy?1.5:.5, miss=RX.urg.test(n.body)?3:1;
   if(p<cost/(1+cost+miss))return 'silent';
   return p>=(busy?.7:.6)?'show':'glance';
 }
+/* === MODEL:END === */
 
 const lastReply={};
 function predict(n){return predictF(features(n,ctx))}
@@ -587,7 +618,6 @@ function learn(n,y,lr,why){
   log(`<b>${n.from}</b> (${n.app}): you ${why} → importance ${pc(before)} → <b>${pc(predict(n))}</b>`);renderBrain();renderHD();
 }
 const pc=p=>Math.round(p*100)+'%';
-function level(p){return ctx.dnd?'silent':p>=(ctx.fs?.7:.6)?'show':p>=.3?'glance':'silent'}
 
 /* ================= notifications ================= */
 const SRC=[
@@ -607,7 +637,8 @@ function notify(src){
   const lv=dec==='scam'?'silent':dec; /* safety rule: login codes are always shown */
   unread.unshift(n);renderIdle();island.style.setProperty('--ac',n.c);
   const what={show:'shown as a compact toast',glance:ctx.fs?'line pulses, no popup':'2-second glance',silent:ctx.dnd?'silent (Do not disturb)':dec==='scam'?'<span style="color:var(--bad)">possible scam — kept silent, marked with ⚠</span>':'silent — only the counter changes'}[lv];
-  log(`<b>${n.from}</b> (${n.app}) importance ${pc(p)} → ${what} <span class="t3">· text model: ${(t=>TYPES[t.pt.indexOf(Math.max(...t.pt))]+' '+pc(Math.max(...t.pt)))(textModel(n.body))}</span>`);
+  log(`<b>${esc(n.from)}</b> (${n.app}) importance ${pc(p)} → ${what} <span class="t3">· text model: ${(t=>TYPES[t.pt.indexOf(Math.max(...t.pt))]+' '+pc(Math.max(...t.pt)))(textModel(n.body))}</span>`+
+    (dec==='scam'&&n._scamWhy?` <span class="t3">· scam guard: ${esc(n._scamWhy)} · score ${pc(n._scamScore)}</span>`:''));
   if(STICKY.includes(cur))return;
   if(lv==='show'){active=n;fillToast(n);transient('toast',5000,()=>learn(n,0,.25,'ignored it'))}
   else if(lv==='glance'){
@@ -647,7 +678,7 @@ function renderIdle(){
 function renderPeek(){
   $('#a-dnd').classList.toggle('on',ctx.dnd);$('#a-timer').classList.toggle('on',ctx.timer);
   const top=[...unread].sort((a,b)=>predict(b)-predict(a)).slice(0,3);
-  $('#list').innerHTML=top.map(n=>`<div class="it" data-id="${n.id}"><span class="dot" style="background:${n.c}"></span>${n._scam?'<span style="color:var(--bad)">'+ico('warn')+'</span>':''}<b>${n.from}</b><span class="t2 ell bd" style="flex:1" dir="auto">${n.body}</span><span class="ib" data-x>${ico('x')}</span></div>`).join('')+(unread.length>3?`<div class="more">+${unread.length-3} more</div>`:'');
+  $('#list').innerHTML=top.map(n=>`<div class="it" data-id="${n.id}"><span class="dot" style="background:${n.c}"></span>${n._scam?'<span style="color:var(--bad)">'+ico('warn')+'</span>':''}<b>${esc(n.from)}</b><span class="t2 ell bd" style="flex:1" dir="auto">${esc(n.body)}</span><span class="ib" data-x>${ico('x')}</span></div>`).join('')+(unread.length>3?`<div class="more">+${unread.length-3} more</div>`:'');
 }
 $('#list').addEventListener('click',e=>{
   const it=e.target.closest('.it');if(!it)return;const n=unread.find(u=>u.id==it.dataset.id);if(!n)return;
