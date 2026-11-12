@@ -11,6 +11,7 @@ public partial class App : Application
     private bool _ownsMutex;
     private Forms.NotifyIcon? _tray;
     private MainWindow? _window;
+    private PrototypeWindow? _prototype;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -19,9 +20,11 @@ public partial class App : Application
         if (!_ownsMutex) { Shutdown(); return; }
 
         _window = new MainWindow();
-        MainWindow = _window;
+        _prototype = new PrototypeWindow();
+        MainWindow = _prototype;
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("Show IslandX", null, (_, _) => _window.ShowIsland());
+        menu.Items.Add("Show prototype", null, (_, _) => _prototype.ShowPreview());
+        menu.Items.Add("Show experimental native status", null, (_, _) => _window.ShowIsland());
         menu.Items.Add("Exit", null, (_, _) => Shutdown());
         _tray = new Forms.NotifyIcon
         {
@@ -30,8 +33,8 @@ public partial class App : Application
             ContextMenuStrip = menu,
             Visible = true
         };
-        _tray.DoubleClick += (_, _) => _window.ShowIsland();
-        _window.Show();
+        _tray.DoubleClick += (_, _) => _prototype.ShowPreview();
+        _prototype.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
