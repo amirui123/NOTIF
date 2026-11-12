@@ -58,11 +58,12 @@ jobs:
       - name: Build and test installer
         shell: pwsh
         run: |
+          trap { Write-Output "::error title=Installer test::$($_.Exception.Message)"; exit 1 }
           Copy-Item IslandX-Windows/README.md out/IslandX-Windows/README.md
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { throw 'Inno Setup 6 is missing from the runner' }
-          & $iscc IslandX-Windows/installer/IslandX.iss
-          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          $compileLog = & $iscc IslandX-Windows/installer/IslandX.iss 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0) { Write-Output "::error title=Inno Setup::$($compileLog -replace "`r|`n", ' ')"; throw 'Installer compilation failed' }
           $installDir = Join-Path $env:RUNNER_TEMP 'IslandX-install-test'
           $setup = Join-Path $PWD 'out/IslandX-Setup-preview-win-x64.exe'
           $install = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -Wait -PassThru
