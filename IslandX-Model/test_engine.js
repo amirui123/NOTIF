@@ -75,6 +75,9 @@ const POLICY = [
   { id: 'promo fa',       n: msg({ app: 'Shop', from: 'Shop', body: 'فروش ویژه پایان فصل، تا ۷۰٪ تخفیف' }), p: .8, expect: 'show' },
   { id: 'plain, low p',   n: msg({ body: 'سلام، خوبی؟' }), p: .1, expect: 'silent' },
   { id: 'meeting fa',     n: msg({ body: 'جلسه ساعت ۱۰:۳۰ برگزار میشه، می‌رسی؟' }), p: .8, expect: 'show' },
+  /* the model reads "Urgent: ..." as scam-like; without content evidence (link / lure / credentials)
+     an unknown sender must not be flagged — otherwise real urgent mail goes silent */
+  { id: 'urgent, no link',n: msg({ app: 'Mail', from: 'Unknown', body: 'Urgent: need the report before 5' }), p: .8, expect: 'show' },
   { id: 'do not disturb', n: msg({ body: 'برنده جایزه شدید! کد ملی بفرستید' }), p: .9, C: { ...C, dnd: true }, expect: 'silent' },
 ];
 

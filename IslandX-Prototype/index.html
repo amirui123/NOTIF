@@ -593,7 +593,9 @@ function scamScore(n,tm){
   for(const k of ['cred','prize','link','ask','urgency','money'])if(SCAM[k].test(t)){
     v+=k==='cred'?.45:k==='prize'?.3:k==='urgency'?.12:k==='money'?.1:.2;why.push(k)}
   if(SCAM.cred.test(t)&&SCAM.prize.test(t)){v+=.15;why.push('cred+prize')}  /* an ID plus a reward is never legitimate */
-  return {v:Math.min(1,v),why:why.join(' · ')};
+  /* the model alone can be loud about legitimate urgent mail, so a scam verdict also needs
+     *content* evidence: an ask for credentials, a lure, or a link. */
+  return {v:Math.min(1,v),why:why.join(' · '),evidence:SCAM.cred.test(t)||SCAM.prize.test(t)||SCAM.link.test(t)};
 }
 /* --- decision policy: expected utility with context-dependent costs + safety rules --- */
 function decide(n,p,C){
@@ -602,7 +604,7 @@ function decide(n,p,C){
   const trusted=n.known||slot('s',n.app+'|'+n.from).e>0;     /* a contact, or someone you have answered before */
   const sc=scamScore(n,tm);
   n._scamWhy=sc.why;n._scamScore=sc.v;
-  if(!trusted&&sc.v>=SCAM_AT)return 'scam';                  /* never promoted; listed with a warning */
+  if(!trusted&&sc.v>=SCAM_AT&&sc.evidence)return 'scam';     /* never promoted; listed with a warning */
   if(isCode(n))return 'show';                                /* login codes are always shown */
   const busy=C.fs||C.priv, cost=busy?1.5:.5, miss=RX.urg.test(n.body)?3:1;
   if(p<cost/(1+cost+miss))return 'silent';

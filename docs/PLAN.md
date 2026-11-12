@@ -16,7 +16,7 @@
 
 ## تست
 ```bash
-node IslandX-Model/test_engine.js   # 18/20 · 2 known gap
+node IslandX-Model/test_engine.js   # 19/21 · 2 known gap
 node IslandX-Model/eval_engine.js   # ارزیابی int8 روی تست‌ست‌های واقعی
 ```
 
