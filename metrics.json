@@ -1,0 +1,13 @@
+{
+ "train_samples": 48000,
+ "test_samples": 12000,
+ "data": "synthetic (400 simulated users)",
+ "logistic baseline": {
+  "accuracy": 0.8301,
+  "auc": 0.9015
+ },
+ "MLP 20-12-1": {
+  "accuracy": 0.8331,
+  "auc": 0.909
+ }
+}

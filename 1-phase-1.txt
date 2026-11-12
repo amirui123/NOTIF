@@ -1,0 +1,25 @@
+PHASE 1 — Project foundation + Design System.
+
+1. Create solution `IslandX` with the structure:
+   /src/IslandX.App (WPF), /src/IslandX.Core (models, state machine, interfaces), /src/IslandX.Services (Windows integrations), /tests/IslandX.Tests
+   Set up DI/Hosting, logging (Serilog file sink, small rolling files), single-instance mutex, tray icon (NotifyIcon alternative that works in WPF, e.g. H.NotifyIcon) with menu: Settings, Pause, Do Not Disturb, Start with Windows, Exit.
+
+2. Design tokens (ResourceDictionary, one place to change everything):
+   - Background base: #08080C → #0E0B16 subtle vertical gradient
+   - Surface: #121018 with 1px inner border rgba(255,255,255,0.07) + faint top-light gradient stroke (glass edge)
+   - Accent violet: #8B5CF6, light #A78BFA, glow #C084FC, deep #5B21B6
+   - Text primary #F5F3FF, secondary #A09BB5, tertiary #6B6680
+   - Success #34D399, Warning #FBBF24, Danger #F87171
+   - Radius: pill = height/2, panels = 30, inner cards = 20, buttons = full pill
+   - Shadow: large soft shadow (black 55% + violet 10% glow), cheap to render (pre-baked or single DropShadowEffect only while expanded)
+   - Font: "Segoe UI Variable Display/Text" with fallback "Segoe UI"; tabular numbers for time/timers; big clock weight SemiBold.
+   - Icons: Segoe Fluent Icons / Segoe MDL2 Assets (no extra image assets, keeps size small).
+   - Optional backdrop: Windows 11 acrylic/Mica via DWM (SetWindowCompositionAttribute fallback for Win10), tinted near-black with purple.
+
+3. Build reusable controls: IslandShell (morphing clipped rounded container), PillButton (primary violet gradient / secondary ghost), IconButton, SeekBar, GlowSlider, SegmentedControl, Avatar (circular, initials fallback), Chip, Badge, AnimatedNumber.
+
+4. Build an Animation helper: spring animator (stiffness ~380, damping ~30, mass 1) used for size/position/opacity/scale morphs, with 60fps CompositionTarget.Rendering ONLY while an animation is active, then unhooked.
+
+5. Create a hidden dev "Gallery" window (Ctrl+Shift+G in Debug builds) that renders all 16 states with mock data so I can visually review each one.
+
+Done criteria: app builds, runs from tray, empty pill shows at top-center on the correct monitor with the final dark-purple style, no focus stealing, click-through outside the pill, idle CPU ≈ 0.

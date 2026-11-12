@@ -1,0 +1,14 @@
+PHASE 7 — Productivity & smart features.
+
+1. Timer / Pomodoro / Stopwatch (reference "Pomodoro"): segmented control (Timer | Pomodoro | Stopwatch), large tabular time (e.g., 18:24), label "Focus — Session 2 of 4", session dots, thin violet progress bar, buttons Pause/Resume, Skip to break, Reset. Configurable durations (25/5/15), sounds, persists across restarts. While running and nothing else active, show a compact pill with remaining time + circular progress. Use a single low-frequency timer (1 Hz) only while running; render at higher rate only during visible expansions.
+2. Next event (reference "Next event"): date tile (NOV 12), title, time range, "in 18 min", location/meeting platform, primary "Join meeting" button (detect Teams/Zoom/Meet links and open them), "Snooze 5 min", plus a task/reminder row ("Submit expense report — Due 12:00"). Source: Windows AppointmentStore (Windows.ApplicationModel.Appointments) + optional ICS URL(s) in settings. Show 10 min before start (configurable) and again at start.
+3. Smart behaviors:
+   - Context awareness: if a fullscreen video/game/presentation is running → auto DND (configurable).
+   - Smart auto-hide: after N seconds of nothing, shrink to minimal pill; optionally fade to low opacity when a window is maximized under it.
+   - Quick actions row in HoverPanel customizable (drag to reorder): Screenshot, Timer, Media, Clipboard, Do Not Disturb, Color picker, Calculator.
+   - Weather chip (opt-in, Open-Meteo, no API key) in HoverPanel.
+   - Command palette: Ctrl+Alt+Space opens a small input inside the island (calc, unit conversion, launch apps, timers like "timer 10m").
+4. Global keyboard shortcuts: configurable, conflict detection.
+5. Localization: English + Persian (Farsi) with full RTL layout switch, Persian digits option, Jalali date option.
+
+Done criteria: Pomodoro, events and quick actions all work and persist; Persian UI renders correctly in RTL.

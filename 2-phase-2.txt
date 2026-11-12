@@ -1,0 +1,17 @@
+PHASE 2 — Island engine: state machine, morph animation, hover-to-expand, queueing.
+
+Implement an IslandState machine with priority + queue:
+States: Idle, HoverPanel, MusicCompact, MusicExpanded, IncomingMessage, QuickReply, ScreenshotPicker, ScreenshotPreview, Volume, Brightness, Charging, LowBattery, Timer(Pomodoro), NextEvent, PrivacyIndicator(Camera/Mic), FullscreenMini.
+
+Rules:
+- Priority (high→low): LowBattery/Privacy > IncomingMessage > NextEvent > Volume/Brightness/Charging > Screenshot > Timer > Music > Idle. A higher-priority event interrupts; lower one is queued and restored afterward.
+- Auto-dismiss durations: message 5s (paused while mouse is over it), volume/brightness 1.8s, charging 3s, screenshot preview 6s, etc. All configurable.
+- HOVER BEHAVIOR (key feature): hovering the pill for ~500 ms (configurable 300–1000) WITHOUT clicking expands to HoverPanel (clock, date, unread count, latest notification card, quick actions: Screenshot / Timer / Media / Settings). Moving the mouse away collapses after ~350 ms grace. No click required, no focus change, never interferes with windows underneath. Cancel the dwell timer if the mouse leaves early. Add subtle haptic-like micro scale (1.0→1.02) on hover start.
+- Idle pill: shows time (big, SemiBold) + short date + unread-notification badge, auto-width. Collapsed music pill shows album art circle, title/artist, mini 3-bar visualizer.
+- Morph animation: the same rounded shape smoothly morphs between sizes/corner radii (spring), content cross-fades with slight blur/scale (content in/out staggered 40ms). No flicker, no layout jumps. Position anchored top-center with ~8-12px margin from the top edge (configurable), and respects the primary/selected monitor and taskbar-on-top setups.
+- Fullscreen detection (SHQueryUserNotificationState + foreground window rect check): switch to FullscreenMini (tiny pill: time + notification count dot as in the last state of the reference). Optionally hide completely while games/presentations; messages in that mode show as a very compact toast, and hover still expands it.
+- Do Not Disturb mode suppresses everything except Low battery & Privacy.
+
+Write unit tests for the state machine (priority, queue restore, timeouts) with a fake clock.
+
+Done criteria: I can trigger every state from the dev Gallery/command palette in Debug and see smooth morph transitions between them at 60fps without CPU spikes when idle.
