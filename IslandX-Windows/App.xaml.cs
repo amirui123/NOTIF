@@ -14,8 +14,15 @@ public partial class App : Application
     private PrototypeWindow? _prototype;
     private OverlayWindow? _overlay;
 
+    private static void RecordError(object? error)
+    {
+        try { System.IO.File.WriteAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "IslandX-startup-error.txt"), error?.ToString() ?? "Unknown error"); } catch (Exception) { }
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => RecordError(args.ExceptionObject);
+        DispatcherUnhandledException += (_, args) => { RecordError(args.Exception); args.Handled = true; Shutdown(1); };
         base.OnStartup(e);
         _instance = new Mutex(true, @"Local\IslandX.Windows.Experimental", out _ownsMutex);
         if (!_ownsMutex) { Shutdown(); return; }
