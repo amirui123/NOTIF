@@ -127,7 +127,7 @@ test/
 
 ```bash
 npm run lint          # ESLint 9 flat config, zero warnings allowed
-npm test              # 76 unit + integration tests (node:test)
+npm test              # 119 unit + integration tests (node:test)
 npm run check         # lint + test, the same command CI runs
 npm run format        # Prettier (write)
 npm run format:check  # Prettier (verify, used by CI)
@@ -140,18 +140,26 @@ once-only reload transfer, the wave director, pause/resume, grenade damage and t
 summary. This is how the bugs listed in [`FIXES.md`](FIXES.md) were caught and are now
 prevented from regressing.
 
-| Suite                                 | Tests | Covers                                                    |
-| ------------------------------------- | ----- | --------------------------------------------------------- |
-| `test/unit/math.test.js`              | 12    | clamp, lerp, damp, angle wrapping, compass, circle-vs-box |
-| `test/unit/textures.test.js`          | 4     | procedural noise ranges and surface recipes               |
-| `test/unit/config.test.js`            | 4     | loadout/weapon/enemy data invariants                      |
-| `test/unit/input.test.js`             | 6     | pointer-lock fallback, wheel debounce, auto-repeat        |
-| `test/unit/weapon.test.js`            | 11    | fire cadence, once-only reload, semi-auto, bolt cycle     |
-| `test/unit/player.test.js`            | 10    | movement, collision, headroom, armour/damage              |
-| `test/integration/game.smoke.test.js` | 14    | full boot → deploy → combat → game over                   |
-| `test/integration/collision.test.js`  | 5     | spawn, walkability, map bounds                            |
-| `test/integration/grenade.test.js`    | 3     | frag damage, player blast, inventory                      |
-| `test/scripts/serve.test.js`          | 7     | dev-server MIME types, 404s, traversal                    |
+| Suite                                     | Tests | Covers                                                    |
+| ----------------------------------------- | ----- | --------------------------------------------------------- |
+| `test/unit/math.test.js`                  | 12    | clamp, lerp, damp, angle wrapping, compass, circle-vs-box |
+| `test/unit/textures.test.js`              | 4     | procedural noise ranges and surface recipes               |
+| `test/unit/config.test.js`                | 4     | loadout/weapon/enemy data invariants                      |
+| `test/unit/input.test.js`                 | 6     | pointer-lock fallback, wheel debounce, auto-repeat        |
+| `test/unit/weapon.test.js`                | 11    | fire cadence, once-only reload, semi-auto, bolt cycle     |
+| `test/unit/player.test.js`                | 10    | movement, collision, headroom, armour/damage              |
+| `test/unit/compass.test.js`               | 4     | tick spacing, label order, scroll calibration             |
+| `test/integration/game.smoke.test.js`     | 14    | full boot → deploy → combat → game over                   |
+| `test/integration/input-wiring.test.js`   | 7     | real DOM events for look/fire/ADS/wheel/pause             |
+| `test/integration/hitscan.test.js`        | 4     | hitbox parenting, 8 m hit rate, headshots                 |
+| `test/integration/collision.test.js`      | 5     | spawn, walkability, map bounds, overhead geometry         |
+| `test/integration/enemy-path.test.js`     | 3     | pathing past cover, bounds, long-engagement sanity        |
+| `test/integration/scene-lighting.test.js` | 6     | camera graph, per-preset fill, idle flash, NaN scan       |
+| `test/integration/laser.test.js`          | 4     | default off, beam length, stale geometry, world dot       |
+| `test/integration/pickups.test.js`        | 6     | heal caps, ammo refill, barrels, blast falloff            |
+| `test/integration/grenade.test.js`        | 3     | frag damage, player blast, inventory                      |
+| `test/integration/ui.test.js`             | 9     | modal semantics, focus trap, HUD diffing, clock           |
+| `test/scripts/serve.test.js`              | 7     | dev-server MIME types, 404s, traversal                    |
 
 ---
 

@@ -103,9 +103,14 @@ describe('pickups & destructibles', () => {
   it('falls off with distance', () => {
     const near = game.enemies.spawnEnemy('assault', game.player.position, new THREE.Vector3(0, 0, -1));
     const far = game.enemies.spawnEnemy('assault', game.player.position, new THREE.Vector3(0, 0, -1));
-    game.enemies.enemies.at(-2).root.position.copy(game.player.position).add(new THREE.Vector3(1, 0, 0));
-    game.enemies.enemies.at(-1).root.position.copy(game.player.position).add(new THREE.Vector3(8, 0, 0));
-    const nearHp = game.enemies.enemies.at(-2).hp;
+    game.enemies.enemies
+      .at(-2)
+      .root.position.copy(game.player.position)
+      .add(new THREE.Vector3(1, 0, 0));
+    game.enemies.enemies
+      .at(-1)
+      .root.position.copy(game.player.position)
+      .add(new THREE.Vector3(8, 0, 0));
     const farHp = game.enemies.enemies.at(-1).hp;
     game.fx.detonate(game.player.position.clone(), 9, 150, game.fx.onExplode);
     assert.ok(near.hp < farHp || !near.alive, 'closer takes more damage');
