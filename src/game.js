@@ -188,6 +188,15 @@ export class Game {
 
     this.muzzleFlashLight = new THREE.PointLight(0xffb84d, 0, 14);
     this.scene.add(this.muzzleFlashLight);
+
+    // Fill light for the viewmodel. The gun is metalness 0.85 with no light of
+    // its own, so in the night preset (sun 0.55, dark blue hemisphere) it went
+    // pitch black — the player could not see the weapon at all. A soft key light
+    // parented to the camera keeps the silhouette readable in every preset
+    // without touching the world lighting.
+    this.viewLight = new THREE.PointLight(0xffe8c8, 0, 3.2, 1.6);
+    this.viewLight.position.set(0.25, 0.4, -0.2);
+    this.camera.add(this.viewLight);
   }
 
   #createComposer() {
@@ -386,6 +395,7 @@ export class Game {
       this.hemi.groundColor.setHex(0x38261e);
       this.hemi.intensity = 0.85;
       this.scene.environmentIntensity = 0.55;
+      if (this.viewLight) this.viewLight.intensity = 0.9;
       this.nvgOn = false;
     } else if (mode === 'night') {
       this.scene.fog.color.setHex(0x0a1018);
@@ -398,6 +408,7 @@ export class Game {
       this.sun.intensity = 0.55;
       this.sun.position.set(35, 45, 30);
       this.hemi.color.setHex(0x1d2e47);
+      if (this.viewLight) this.viewLight.intensity = 2.2;
       this.hemi.groundColor.setHex(0x0c1014);
       this.hemi.intensity = 0.42;
       this.scene.environmentIntensity = 0.22;
@@ -417,6 +428,7 @@ export class Game {
       this.hemi.groundColor.setHex(0x36332c);
       this.hemi.intensity = 1.05;
       this.scene.environmentIntensity = 0.62;
+      if (this.viewLight) this.viewLight.intensity = 0.6;
       this.nvgOn = false;
     }
     uniforms.uSunDir.value.copy(this.sun.position).normalize();
