@@ -182,12 +182,24 @@ canvas.game-canvas {
   position: absolute;
   top: 4px;
   left: 0;
+  height: 22px;
   font-family: var(--mono);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   color: rgba(255, 255, 255, 0.84);
   will-change: transform;
+}
+/* Exact tick placement: the JS positions ticks at COMPASS_SCALE px per degree. */
+#compass-strip .c-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.5);
+}
+#compass-strip .c-tick.major {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
 }
 #compass-center {
   position: absolute;

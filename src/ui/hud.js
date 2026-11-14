@@ -56,19 +56,54 @@ export class Hud {
     this.buildCompass();
   }
 
+  /**
+   * Build the compass track as evenly spaced, absolutely positioned labels.
+   *
+   * It used to be a single text node whose spacing only *approximately* matched
+   * the px-per-degree offset used to scroll it, so the letter under the centre
+   * mark drifted away from the real heading (up to ~7% error, i.e. a whole
+   * 22.5° tick over a turn). Laying the labels out at exact 15° intervals makes
+   * the correspondence exact by construction.
+   */
   buildCompass() {
-    // One tick per 15°, three full turns so the strip is wider than the
-    // viewport at every bearing. The old version joined cardinal labels with
-    // spaces, so the spacing never matched the 1.45 px/degree transform and the
-    // compass drifted away from the true heading.
-    const marks = ['N', '', 'NNE', '', 'NE', '', 'ENE', '', 'E', '', 'ESE', '', 'SE', '', 'SSE', ''];
-    marks.push('', 'S', '', 'SSW', '', 'SW', '', 'WSW', '', 'W', '', 'WNW', '', 'NW', '', 'NNW', '');
-    this.compassCells = [...marks, ...marks, ...marks];
-    this.el.compassStrip.textContent = this.compassCells.join('  ');
+    const strip = this.el.compassStrip;
+    if (!strip) return;
+    strip.textContent = '';
+    const marks = [
+      'N',
+      'NNE',
+      'NE',
+      'ENE',
+      'E',
+      'ESE',
+      'SE',
+      'SSE',
+      'S',
+      'SSW',
+      'SW',
+      'WSW',
+      'W',
+      'WNW',
+      'NW',
+      'NNW',
+    ];
+    // Two copies so the -180..+180 window always has content on both sides.
+    for (let turn = 0; turn < 2; turn++) {
+      for (let i = 0; i < marks.length; i++) {
+        const tick = document.createElement('span');
+        tick.className = i % 4 === 0 ? 'c-tick major' : 'c-tick';
+        tick.textContent = marks[i];
+        // 360° / 16 marks = 22.5° per mark.
+        tick.style.left = `${(turn * 360 + i * 22.5) * Hud.COMPASS_SCALE}px`;
+        if (i === 0 && turn === 0) tick.textContent = marks[0];
+        strip.append(tick);
+      }
+    }
+    strip.style.width = `${2 * 360 * Hud.COMPASS_SCALE}px`;
   }
 
-  /** Pixels per degree — matches the CSS font metrics of the strip. */
-  static COMPASS_SCALE = 1.9;
+  /** Pixels per degree. The tick positions use the same constant. */
+  static COMPASS_SCALE = 2;
 
   showPlaying() {
     this.el.hud.classList.add('active');
@@ -144,10 +179,10 @@ export class Hud {
       setText('bearing-val', v);
       const deg = Number.parseFloat(v) || 0;
       if (this.el.compassStrip) {
-        // 48 ticks per turn × 2 px spacing ≈ 1.9 px/degree.
         const width = this.el.compassStrip.parentElement?.clientWidth ?? 300;
-        const offset = width / 2 - deg * Hud.COMPASS_SCALE;
-        this.el.compassStrip.style.transform = `translateX(${offset}px)`;
+        // 0° must land under the centre mark: shift by half the window, then
+        // scroll by the bearing at exactly COMPASS_SCALE pixels per degree.
+        this.el.compassStrip.style.transform = `translateX(${width / 2 - deg * Hud.COMPASS_SCALE}px)`;
       }
     });
 
