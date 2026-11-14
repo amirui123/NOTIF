@@ -1,0 +1,46 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publish game
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # enablement: true lets the first run create the Pages site itself, so
+      # deploying never depends on a manual trip to the repository settings.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Stage site
+        run: |
+          mkdir -p _site
+          cp -r index.html styles src vendor _site/
+          cp docs/favicon.svg _site/favicon.svg
+          cp README.md FIXES.md LICENSE _site/
+          echo "staged $(find _site -type f | wc -l) files, $(du -sh _site | cut -f1)"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
