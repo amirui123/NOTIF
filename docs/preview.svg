@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="SECTOR-7 // BODYCAM OPS title card">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#26364a"/>
+      <stop offset="55%" stop-color="#6f7f8c"/>
+      <stop offset="100%" stop-color="#20262c"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="72%">
+      <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.82"/>
+    </radialGradient>
+    <pattern id="grain" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="4" fill="#fff" opacity="0.012"/>
+      <circle cx="1" cy="1" r="0.6" fill="#fff" opacity="0.03"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#sky)"/>
+  <!-- valley ridges -->
+  <path d="M0 400 L150 300 L280 360 L420 286 L560 352 L700 300 L860 366 L1010 300 L1200 380 L1200 630 L0 630 Z" fill="#2b343b" opacity="0.9"/>
+  <path d="M0 470 L180 392 L340 448 L520 380 L700 452 L880 396 L1060 460 L1200 420 L1200 630 L0 630 Z" fill="#1b2228" opacity="0.95"/>
+  <!-- bridge silhouette -->
+  <g stroke="#0f1418" stroke-width="10" fill="none" opacity="0.8">
+    <path d="M420 402 H980"/>
+    <path d="M520 402 V300 M660 402 V282 M800 402 V300 M930 402 V318"/>
+  </g>
+  <!-- bodycam corners -->
+  <g stroke="#ffffff" stroke-opacity="0.32" stroke-width="4" fill="none">
+    <path d="M40 96 V56 H88"/>
+    <path d="M1160 96 V56 H1112"/>
+    <path d="M40 534 V574 H88"/>
+    <path d="M1160 534 V574 H1112"/>
+  </g>
+  <!-- REC badge -->
+  <g transform="translate(916 60)">
+    <circle cx="0" cy="9" r="7" fill="#ef4444"/>
+    <text x="18" y="15" font-family="Consolas, monospace" font-size="19" fill="#f8fafc" letter-spacing="2">REC // BODYCAM-HD</text>
+  </g>
+  <text x="68" y="82" font-family="Consolas, monospace" font-size="17" fill="#cbd5e1" letter-spacing="2">UNIT: AXON-TAC // OP-01</text>
+
+  <!-- title -->
+  <text x="600" y="300" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="96" font-weight="900" fill="#fff" letter-spacing="6">SECTOR-7</text>
+  <text x="600" y="352" text-anchor="middle" font-family="Consolas, monospace" font-size="27" fill="url(#amber)" letter-spacing="8">// BODYCAM OPS</text>
+  <text x="600" y="398" text-anchor="middle" font-family="Consolas, monospace" font-size="15" fill="#94a3b8" letter-spacing="4">PROCEDURAL PBR · SPATIAL AUDIO · TACTICAL AI</text>
+
+  <!-- crosshair -->
+  <g stroke="#fff" stroke-opacity="0.85" stroke-width="3">
+    <path d="M600 486 v14 M600 556 v-14 M556 521 h14 M644 521 h-14"/>
+  </g>
+
+  <!-- HUD chips -->
+  <g font-family="Consolas, monospace" font-size="15" fill="#cbd5e1" letter-spacing="1">
+    <rect x="40" y="470" width="250" height="46" fill="#090d13" opacity="0.72" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="56" y="492" fill="#94a3b8" font-size="11">HEALTH</text>
+    <text x="56" y="509" fill="#22c55e" font-size="18" font-weight="700">100</text>
+    <rect x="120" y="498" width="150" height="7" fill="#ffffff" opacity="0.1"/>
+    <rect x="120" y="498" width="150" height="7" fill="#22c55e"/>
+
+    <rect x="910" y="470" width="250" height="46" fill="#090d13" opacity="0.72" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="1144" y="488" text-anchor="end" fill="#f59e0b" font-size="11">MK18 MOD-1 SUPPRESSED</text>
+    <text x="1144" y="510" text-anchor="end" fill="#fff" font-size="22" font-weight="700">30 <tspan fill="#94a3b8" font-size="14">/ 150</tspan></text>
+  </g>
+
+  <rect width="1200" height="630" fill="url(#vignette)"/>
+  <rect width="1200" height="630" fill="url(#grain)"/>
+</svg>

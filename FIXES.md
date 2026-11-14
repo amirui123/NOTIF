@@ -1,0 +1,78 @@
+# FIXES — what was broken in the original single-file build
+
+The delivered `ggfrty.html` was a 2,639-line prototype. It looked impressive on the menu but
+fell over in practice. This document lists every bug that was found and how it is fixed in
+the rewrite. Each item is either covered by an automated test or verified manually.
+
+Legend: **🔴 crash / blocker · 🟠 gameplay bug · 🟡 visual/polish · 🔵 code quality**
+
+---
+
+## Blockers
+
+| #   | Bug                                                                                                                                                                                                                           | Fix                                                                                                                                     |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | 🔴 **The map was never built.** `TacticalMap.build()` was defined but never called, so the scene contained no level geometry, no colliders and no spawn nodes. Deploying spawned zero enemies and you fell through the world. | `Game` now calls `level.build()` during construction; the integration test asserts spawn nodes and wave spawning.                       |
+| 2   | 🔴 **The first frame crashed in the menu** — the orbit camera dereferenced `this.vm.root` before a weapon was equipped (`TypeError: Cannot read properties of null`).                                                         | Null-safe in `renderOrbit()` / `#updateGameplay()`.                                                                                     |
+| 3   | 🔴 **Every fatal error was invisible.** The error handler wrote into `#fatal-error`, whose CSS was `display:none`, so any failure produced a silent black screen. `unhandledrejection` was not handled at all.                | `core/errors.js` shows a styled, actionable error panel and handles `error` + `unhandledrejection`; the loader is dismissed on failure. |
+| 4   | 🔴 **The game required a CDN at runtime.** three.js was loaded from `cdn.jsdelivr.net` via an import map — no internet, no game.                                                                                              | three.js r170 is vendored in `vendor/three/`, import map points at local files; tested by the "serves vendored three.js" case.          |
+| 5   | 🔴 **The reload state machine added ammunition every frame.** While `p > 0.72` the transfer block re-ran each tick, so a 2-second reload could add hundreds of rounds (and could exceed `reserveMax`).                        | A `reloadFlags.inserted` latch guarantees exactly one transfer; asserted by "refills the magazine exactly once".                        |
+| 6   | 🔴 **Web Audio leaked PannerNodes forever.** Every enemy shot created a panner that was never disconnected; after a few minutes the graph stalled and audio died.                                                             | `#spatial()` auto-disconnects after a lifetime; voices are capped at 24.                                                                |
+
+## Gameplay
+
+| #   | Bug                                                                                                                                                                                    | Fix                                                                                                                                                                |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 7   | 🟠 Grenades were **cosmetic only** — `FXManager.detonate()` called a callback that no one ever supplied, so frags dealt zero damage.                                                   | `FXManager.setExplosionHandler()` is wired to the game; covered by `grenade.test.js`.                                                                              |
+| 8   | 🟠 The **damage direction indicator pointed the wrong way**: the bearing was computed in world space and then rotated by yaw a second time.                                            | `relativeBearingDeg()` projects the attacker into camera space; unit tested.                                                                                       |
+| 9   | 🟠 **Crouch locked the player under roofs** — nothing checked headroom before standing.                                                                                                | `#hasHeadroom()` probes colliders above the eye line.                                                                                                              |
+| 10  | 🟠 **Semi-auto weapons could fire twice per click** (`mousedown` called `tryFire` and the update loop called it again).                                                                | Single trigger edge: `triggerHeld` for autos, `triggerPressed` for semi-autos.                                                                                     |
+| 11  | 🟠 The **mouse wheel swapped weapons on every scroll notch**, including accidental trackpad scrolls.                                                                                   | Input accumulates deltas and requires a deliberate 60 px (or 3 lines) gesture.                                                                                     |
+| 12  | 🟠 **Key auto-repeat toggled gadgets rapidly** — holding `C`, `N` or `T` flickered crouch/NVG/laser dozens of times per second.                                                        | `Input` filters `e.repeat` and already-down keys.                                                                                                                  |
+| 13  | 🟠 **Bolt-action weapons never ejected a casing** (`boltDelay === 0` skipped the branch for semi-autos, and the bolt branch only ran for the Kar98k).                                  | Casings are ejected per shot for autos/semi-autos and during the bolt cycle for bolt guns.                                                                         |
+| 14  | 🟠 **Enemies could spawn behind the player's back wall**, appear inside geometry, or (after 3 waves) stop spawning entirely because deleted spawn nodes left `spawnNodes` unavailable. | Spawn scoring prefers out-of-sight-but-reachable nodes, validates against geometry, falls back to a smoke-covered far node, and guards against an empty node list. |
+| 15  | 🟠 Dead enemies kept **hitboxes parented to the scene**, so shots at corpses registered hits and stole kills from live targets.                                                        | Hitboxes are detached on death and disposed with the body.                                                                                                         |
+| 16  | 🟠 Enemy AI ran a **line-of-sight raycast for every enemy every frame** (7 raycasts at 60 fps against the whole map).                                                                  | LOS is throttled to ~8 Hz per enemy and the raycaster is shared.                                                                                                   |
+| 17  | 🟠 **Space scrolled the page** and Tab moved focus out of the game while playing.                                                                                                      | The input layer consumes scroll keys and Tab in game mode.                                                                                                         |
+| 18  | 🟠 **Audio never resumed** after tab switches or after the browser suspended the context.                                                                                              | `resume()` is called on pointer-lock gain, on deploy and on visibility change.                                                                                     |
+| 19  | 🟠 **Settings were not persisted** — weather, quality, sensitivity and operator were lost on reload.                                                                                   | Stored in `localStorage` with a fail-safe wrapper (Safari private mode).                                                                                           |
+| 20  | 🟠 The **summary box never hid** after redeploying; the “NEW DEPLOYMENT” button was toggled with inline styles.                                                                        | `Menu.show()/hide()` own that state via the `hidden` attribute.                                                                                                    |
+
+## Visual / UX
+
+| #   | Bug                                                                                                                       | Fix                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 21  | 🟡 The **HUD wrote ~15 DOM properties per frame**, forcing layout 60×/s.                                                  | `Hud` diffs values and only writes on change.                                              |
+| 22  | 🟡 Spark/blood/dust particles allocated **a new material per particle**, compiling shaders mid-firefight (frame hitches). | Materials are pooled and shared per effect; only meshes are pooled.                        |
+| 23  | 🟡 Viewmodel swaps **leaked every geometry, material and texture** (~40 objects per weapon swap).                         | `buildViewmodel()` returns a `dispose()`; swap and mission restart free the GPU resources. |
+| 24  | 🟡 The viewmodel cast **shadows onto the player camera**, producing giant shadow blobs.                                   | Viewmodel meshes never cast or receive shadows.                                            |
+| 25  | 🟡 The laser line started at a **hard-coded local offset** and didn't follow the muzzle; the dot lived in camera space.   | Both are computed per frame from the real muzzle and the world-space hit point.            |
+| 26  | 🟡 The compass was **not smooth** and drifted from the actual heading.                                                    | Single `formatBearing()` source of truth, unit tested.                                     |
+| 27  | 🟡 The NVG overlay stayed **fully green after toggling the camera off**, and night mode hard-forced it.                   | Uniforms are eased toward the target in one place.                                         |
+| 28  | 🟡 Loading had **no feedback** — the boot spike (texture baking) looked like a freeze.                                    | Progress bar with staged labels; textures bake inside `Game` with progress callbacks.      |
+| 29  | 🟡 No `prefers-reduced-motion` support, no focus-visible styles, no mobile layout.                                        | Added; the HUD collapses gracefully under 720 px and touch devices get a clear notice.     |
+| 30  | 🟡 Operator cards were `<button>`s styled as divs with **no keyboard focus ring**.                                        | Real buttons with `aria-pressed`, `:focus-visible` rings and a labelled dialog.            |
+
+## Code quality
+
+| #   | Bug                                                                                                 | Fix                                                                                    |
+| --- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 31  | 🔵 Everything lived in **one 2,639-line file** with mixed concerns (data, shaders, AI, DOM, audio). | Split into 19 focused ES modules with explicit dependencies.                           |
+| 32  | 🔵 Weapon/operator/enemy **data was hard-coded inside the game loop**.                              | `src/config.js`, frozen, validated by unit tests.                                      |
+| 33  | 🔵 Magic numbers for time, damage and speeds were scattered inline.                                 | Named constants per module.                                                            |
+| 34  | 🔵 `innerHTML` string building in the UI.                                                           | `textContent` + `createElement` everywhere.                                            |
+| 35  | 🔵 No tests, no lint, no CI, no README.                                                             | ESLint 9 flat config, Prettier, 44 tests, GitHub Actions CI + Pages deploy, full docs. |
+| 36  | 🔵 No teardown path (`dispose`) — resources could never be freed.                                   | Every manager implements `dispose()`; `Game.dispose()` tears the whole thing down.     |
+
+---
+
+## Verified numbers (before → after)
+
+| Metric                    | Original                   | Now                                             |
+| ------------------------- | -------------------------- | ----------------------------------------------- |
+| Source modules            | 1 file, 2,639 lines        | 19 modules, ~4.6k lines including docs-comments |
+| Automated tests           | 0                          | 44 (unit + integration + server)                |
+| Runtime errors at boot    | 1 (null viewmodel)         | 0                                               |
+| Enemy AI raycasts / frame | 7                          | ~1 (throttled)                                  |
+| DOM writes / frame (HUD)  | ~15                        | 0–3                                             |
+| External network requests | 1 CDN (fatal when offline) | 0                                               |

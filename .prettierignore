@@ -1,0 +1,5 @@
+vendor/
+node_modules/
+.work/
+dist/
+package-lock.json
