@@ -3,7 +3,7 @@
  * Copy the pinned three.js release from node_modules into vendor/ so the game
  * keeps working offline. Run after bumping three: `npm i three@<ver> && npm run vendor:three`.
  */
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +26,26 @@ const FILES = [
   'examples/jsm/environments/RoomEnvironment.js',
   'LICENSE',
 ];
+
+const CHECK_ONLY = process.argv.includes('--check');
+
+if (CHECK_ONLY) {
+  let missing = 0;
+  for (const file of FILES) {
+    try {
+      await stat(join(OUT, file));
+    } catch {
+      console.error(`missing vendor/three/${file}`);
+      missing++;
+    }
+  }
+  if (missing) {
+    console.error(`vendor/three is incomplete (${missing} files) — run: npm run vendor:three`);
+    process.exit(1);
+  }
+  console.log(`vendor/three is complete (${FILES.length} files)`);
+  process.exit(0);
+}
 
 await mkdir(OUT, { recursive: true });
 for (const file of FILES) {

@@ -1,5 +1,11 @@
 name: Deploy to GitHub Pages
 
+# The site is plain static files (no build step), so Pages can serve either
+#   a) GitHub Actions  (this workflow), or
+#   b) Deploy from a branch → main → /   (no workflow needed at all).
+# This workflow detects which mode is configured and behaves accordingly, so a
+# disabled Pages site gives guidance instead of a red X on every push.
+
 on:
   push:
     branches: [main]
@@ -24,13 +30,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # enablement: true lets the first run create the Pages site itself, so
-      # deploying never depends on a manual trip to the repository settings.
+      - name: Detect Pages configuration
+        id: probe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          status=$(curl -s -o /tmp/pages.json -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/pages")
+          echo "status=$status"
+          if [ "$status" = "200" ]; then
+            build_type=$(node -e "console.log(require('/tmp/pages.json').build_type || 'legacy')")
+            echo "mode=$build_type" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=none" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Explain how to enable Pages
+        if: steps.probe.outputs.mode == 'none'
+        run: |
+          {
+            echo "### GitHub Pages is not enabled for this repository"
+            echo ""
+            echo "Everything is already deployed-ready — no build step is needed."
+            echo "Pick **one** of these, both take a single click:"
+            echo ""
+            echo "1. **Settings → Pages → Source: GitHub Actions** (recommended)."
+            echo "   Then re-run this workflow."
+            echo "2. **Settings → Pages → Source: Deploy from a branch → \`main\` → \`/\`**."
+            echo "   The site goes live within a minute; this workflow will skip"
+            echo "   publishing on later pushes."
+            echo ""
+            echo "Site URL: https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=Pages disabled::Enable Pages in Settings → Pages (see job summary)."
+
+      - name: Skip (branch-served site)
+        if: steps.probe.outputs.mode == 'legacy'
+        run: |
+          echo "Pages is served straight from the \`main\` branch, so there is nothing to publish here." >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
+        if: steps.probe.outputs.mode == 'workflow'
 
       - name: Stage site
+        if: steps.probe.outputs.mode == 'workflow'
         run: |
           mkdir -p _site
           cp -r index.html styles src vendor _site/
@@ -39,8 +85,10 @@ jobs:
           echo "staged $(find _site -type f | wc -l) files, $(du -sh _site | cut -f1)"
 
       - uses: actions/upload-pages-artifact@v3
+        if: steps.probe.outputs.mode == 'workflow'
         with:
           path: _site
 
       - id: deployment
+        if: steps.probe.outputs.mode == 'workflow'
         uses: actions/deploy-pages@v4
