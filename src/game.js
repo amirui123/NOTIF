@@ -88,6 +88,7 @@ export class Game {
       fx: this.fx,
       enemies: this.enemies,
       level: this.level,
+      scene: this.scene,
     });
     this.weapon.onExplosion = (pos, radius, damage) => this.#handleExplosion(pos, radius, damage);
     this.fx.setExplosionHandler((pos, radius, damage) => this.#handleExplosion(pos, radius, damage));

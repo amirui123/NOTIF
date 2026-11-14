@@ -321,11 +321,14 @@ export function buildViewmodel(weaponId, operator, tex) {
   laserLine.frustumCulled = false;
   gun.add(laserLine);
 
+  // World-space impact dot: deliberately NOT parented to the gun, otherwise it
+  // would inherit the viewmodel transform and float in front of the camera.
   const laserDot = new THREE.Mesh(
     new THREE.SphereGeometry(0.025, 8, 8),
     new THREE.MeshBasicMaterial({ color: 0x4ade80 }),
   );
   laserDot.visible = false;
+  laserDot.matrixAutoUpdate = true;
 
   // Arms -----------------------------------------------------------------
   const sleeveMat = new THREE.MeshStandardMaterial({
