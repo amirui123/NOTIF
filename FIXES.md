@@ -94,6 +94,89 @@ internals-level tests because the breakage lived in the wiring between modules.
 
 ---
 
+## The weapon rebuild
+
+The guns were the most-looked-at object in the game and the least convincing.
+The original viewmodels were **338-894 triangles each**, assembled from bare
+`BoxGeometry` and `CylinderGeometry` with every surface meeting its neighbour at
+a mathematically perfect 90 degrees, and every part sharing **one** metal
+material.
+
+Both halves of that matter, and neither is about polygon count:
+
+- **No chamfers.** A real machined edge is a 0.3-1.5 mm fillet, and the specular
+  highlight that rolls across that fillet _is_ how the eye recognises metal.
+  With a perfectly sharp edge there is no geometry for the highlight to roll
+  across, so it collapses into a hard line and the object reads as a CAD block.
+- **One material.** At 0.4 m from the eye, material separation is the whole
+  read. An anodised receiver, a phosphate barrel, a glass-filled nylon
+  handguard and a rubber grip are four colours and four roughnesses. Sharing
+  one albedo makes five parts into one grey object.
+
+### What replaced it
+
+`src/world/gunkit.js` — a hand-rolled hard-surface kit. Primitives: a swept
+chamfered box (64 triangles, with a real band of intermediate normals rather
+than one flat facet per corner), crowned tubes with a genuine inner bore, lathed
+profiles, bevelled extrusions, MIL-STD-1913 Picatinny rail with the correct
+21.2 mm / 15.7 mm / 10.55 mm pitch, M-LOK pockets, hex-socket screws, knurling
+and serrations. Plus an `Assembly` that merges geometry per material, so a whole
+rifle costs 4-7 draw calls.
+
+`src/world/gunmaterials.js` — anodised aluminium, phosphate steel, glass-filled
+nylon, rubber, bare wear metal, brass, optic glass and furniture, each with a
+weapon-scale UV and its own roughness and metalness.
+
+`src/world/guns/` — one builder per weapon, authored at real scale in metres
+against real dimensions.
+
+| Weapon | Before |  After | Draw calls |
+| ------ | -----: | -----: | ---------: |
+| MK18   |    670 | 23,600 |          6 |
+| HK416  |    710 | 21,712 |          7 |
+| MP7    |    618 | 14,592 |          5 |
+| P226   |    338 | 14,322 |          4 |
+| M249   |    822 | 17,512 |          6 |
+| Kar98  |    894 | 20,572 |          4 |
+
+Still procedural: no new art assets, no network at runtime, no new dependency.
+
+### Bugs found by rasterising the result
+
+No GPU in the build environment, so a CPU rasteriser was written that shades
+each triangle with a two-light Lambert + specular model. It found four defects
+that no amount of reading the code had caught:
+
+- **Rings scattered across the front of the MK18.** `ringProfile()` returns a
+  lathe about Z, which is already the suppressor's axis, so the band needed a
+  plain translate. It also had a `rotateX(π/2)` applied _after_ the translate,
+  which threw every ring end-on and sprayed them across the muzzle.
+- **A slab of sleeve across the weapon.** Rotating the sleeve mesh by π about Y
+  to reverse it also negated X, so the arm lay across the frame instead of
+  running back toward the camera. Reversing Z alone (`scale.z = -1`) is the fix.
+- **Floating cubes at the M249's muzzle and bipod.** The same translate-then-
+  rotate ordering bug: a slot positioned on the muzzle circle and then rotated
+  about the bore ends up wherever the rotation left it.
+- **The Kar98's stock in pieces.** Ten separate boxes for the stock leave a
+  visible gap wherever two segments disagree about width. Replaced with a single
+  swept section that overlaps its neighbours.
+- **An arm longer than the pistol it held.** One forearm length was used for
+  every weapon. On a 196 mm pistol a 320 mm sleeve fills the frame; small
+  weapons now get short arms.
+
+### Contract kept
+
+`WeaponController` reaches into the viewmodel by name every frame — `magPart`,
+`boltPart`, `leftArm`, `muzzlePoint`, `ejectPoint`, `flashGroup`, `flashlight`,
+`laserLine`, `laserDot`. All 14 required members are asserted for all six
+weapons, and the magazine and bolt are now real geometry inside their pivot
+groups rather than empty transforms, so `magPart.position.set(0, 0, 0)` means
+"seated" and the reload's drop reads correctly.
+
+Tests: 140 (was 119). New suites: `gunkit` (12) and `weapons` (9).
+
+---
+
 ## Verified numbers (before → after)
 
 | Metric                    | Original                   | Now                                             |
