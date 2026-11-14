@@ -813,9 +813,18 @@ export class Game {
         this.player.heal(35, 25);
         this.hud.prompt('+35 HEALTH // +25 ARMOR PLATE');
       } else {
+        // Top up the reserve *and* refill the magazine of the weapon in hand:
+        // grabbing ammo mid-firefight used to leave you at 3 rounds with 150 in
+        // reserve, which reads as a broken pickup.
         for (const slot of this.weapon.slots) {
-          slot.reserve = Math.min(WEAPONS[slot.id].reserveMax, slot.reserve + WEAPONS[slot.id].magSize * 2);
+          const spec = WEAPONS[slot.id];
+          slot.reserve = Math.min(spec.reserveMax, slot.reserve + spec.magSize * 2);
         }
+        const active = this.weapon.currentSlot;
+        const spec = WEAPONS[active.id];
+        const loaded = Math.min(active.reserve, spec.magSize - active.mag);
+        active.mag += loaded;
+        active.reserve -= loaded;
         this.frags = Math.min(3, this.frags + 1);
         this.hud.prompt('+AMMO RESUPPLY // +1 FRAG');
       }
