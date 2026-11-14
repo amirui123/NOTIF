@@ -133,7 +133,12 @@ export function buildGlove(mats, opts = {}) {
   // something rather than pointing at it.
   const fingers = [];
   FINGERS.forEach((spec) => {
-    const curl = opts.grip ? [0.35, 0.6, 0.45] : [0.28, 0.62, 0.55];
+    // A hand around a grip is a FIST, not a relaxed hand. The first pass used
+    // 0.35/0.6/0.45 rad, which leaves the tip 58 mm downrange of the knuckle —
+    // fingers pointing straight out over the barrel. Wrapping a ~32 mm grip
+    // needs roughly 75/80/70 degrees at the three joints, and at that point the
+    // tip curls back past z = 0 and the hand reads as closed.
+    const curl = opts.grip ? [1.3, 1.4, 1.2] : [0.45, 0.85, 0.7];
     const f = buildFinger(mats, spec, curl);
     f.root.position.set(spec.x * scale, -h * 0.06, -len * 0.95);
     root.add(f.root);
@@ -166,35 +171,40 @@ export function buildGlove(mats, opts = {}) {
 /**
  * A forearm sleeve with real fold rings, ending in a rolled cuff.
  *
- * The taper runs the correct way — 56 mm at the elbow, 44 mm at the wrist —
- * and the fold rings are what stop a cylinder from looking like a pipe.
+ * Authored **wrist-first**: z = 0 is the wrist and z = +length is the elbow,
+ * with the section widening as it goes. That matters because the arm group's
+ * origin is the hand, so the sleeve has to reach back toward the camera — and
+ * the first version got this backwards and then "fixed" it with
+ * `scale.z = -1`, which mirrors the mesh, inverts every normal and flips the
+ * winding. The result was an inside-out tube that rendered as a zigzag of
+ * alternating light and dark triangles across the whole frame.
+ *
+ * Authored correctly there is nothing to mirror.
  */
 export function buildForearm(mats, opts = {}) {
   const THREE = mats._three;
-  const seg = opts.segments ?? 14;
-  const profile = [];
+  const seg = opts.segments ?? 16;
   const len = opts.length ?? 0.34;
+  const rWrist = opts.rWrist ?? 0.034;
+  const rElbow = opts.rElbow ?? 0.046;
+  const profile = [];
   for (let i = 0; i <= seg; i++) {
     const t = i / seg;
     const z = t * len;
-    // 46 mm at the elbow, 34 mm at the wrist. The 56/44 of a bare forearm is
-    // anatomically right but it is the biggest thing on screen after the
-    // weapon, and a viewmodel arm is always seen through a sleeve that is
-    // bunched up and therefore narrower than the limb inside it.
-    let r = 0.046 - t * 0.012;
+    let r = rWrist + t * (rElbow - rWrist);
     // Three fold rings, decreasing toward the wrist.
     for (const [at, amp] of [
-      [0.18, 0.0028],
-      [0.42, 0.0022],
-      [0.68, 0.0016],
+      [0.2, 0.0026],
+      [0.45, 0.002],
+      [0.7, 0.0014],
     ]) {
       const d = (t - at) / 0.055;
       r += amp * Math.exp(-d * d);
     }
     profile.push([z, r]);
   }
-  const sleeve = new THREE.Mesh(latheZ(profile, 12), mats.sleeve);
-  return sleeve;
+  // Open-ended: no cap at the elbow, because it is off screen anyway.
+  return new THREE.Mesh(latheZ(profile, 14), mats.sleeve);
 }
 
 /** A rolled fabric cuff, built as a torus-ish lathe. */
@@ -215,28 +225,97 @@ export function buildCuff(mats) {
   return new THREE.Mesh(g, mats.cuff);
 }
 
+/**
+ * Point a hand at a grip, from the two directions that actually matter.
+ *
+ * The glove is authored with fixed local axes: fingers along -Z, the back of
+ * the hand along +Y, the thumb along +X. Posing it with three hand-tuned Euler
+ * angles cannot keep those axes meaningful — a small change to any one angle
+ * swings the fingers off the grip and the hand ends up splayed above the
+ * receiver, which is exactly what "the gun looks scrambled" was.
+ *
+ * Instead take the two directions a human would describe — where the fingers
+ * point, and which way the back of the hand faces — build an orthonormal basis
+ * from them, and hand that to the group. The result is exact and, unlike
+ * Euler triples, readable: a reviewer can check `forward` against the grip.
+ *
+ * @param {import('three').Object3D} arm     the arm group to orient
+ * @param {number[]} forward   direction the fingers travel, weapon-local
+ * @param {number[]} backOfHand direction the back of the hand faces
+ * @param {number[]} [at]      wrist position, weapon-local
+ */
+/**
+ * Where a closed fist's grip hole sits, in glove-local space.
+ *
+ * Not the palm centre: with the fingers curled to a fist the knuckle row is at
+ * z = -0.093 and the fingertips at z = -0.080, so the cylinder a grip passes
+ * through runs roughly through z = -0.087, y = -0.028. Placing the palm on the
+ * socket instead offsets the whole hand by half a fist length and the fingers
+ * never reach around anything — which is what "the parts are right but it is
+ * not assembled" looked like.
+ */
+export const FIST_CENTRE = [0, -0.028, -0.0865];
+
+/**
+ * Point a hand at a grip and put its fist on it.
+ *
+ * The wrist is the arm group's origin, so if the fist centre must land on the
+ * socket then the wrist position is fixed once the orientation is known:
+ *
+ *     wrist = socket - R * FIST_CENTRE
+ *
+ * Solving that rather than eyeballing a wrist offset is what makes the grip
+ * actually sit inside the hand.
+ *
+ * @param {import('three').Object3D} arm       arm group (origin at the wrist)
+ * @param {number[]} forward   direction the fingers travel
+ * @param {number[]} backOfHand direction the back of the hand faces
+ * @param {number[]} socket    grip position the fist should close around
+ * @param {boolean}  mirror    flip the hand (left glove is a mirrored right)
+ */
+export function poseHand(arm, forward, backOfHand, socket = null, mirror = false) {
+  const THREE = arm.userData._three;
+  const f = new THREE.Vector3(...forward).normalize();
+  const y = new THREE.Vector3(...backOfHand).normalize();
+  const z = f.clone().negate(); // glove -Z is the finger direction
+  // The two inputs must be *roughly* perpendicular: they are the two axes of a
+  // hand, and a hand is not flat. If they are nearly parallel the
+  // orthogonalisation below returns a near-zero vector and the whole glove
+  // collapses to a smear — a silent, very confusing failure. Say so loudly.
+  const dot = y.dot(z);
+  if (Math.abs(dot) > 0.92) {
+    throw new Error(
+      `poseHand: "forward" and "backOfHand" are nearly parallel (dot=${dot.toFixed(3)}). ` +
+        'They describe perpendicular axes of a hand; check the caller.',
+    );
+  }
+  y.addScaledVector(z, -dot).normalize();
+  const x = new THREE.Vector3().crossVectors(y, z).normalize();
+  arm.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+  // A right hand is a mirrored left: build one chirality and flip it. The
+  // groups below are mirrored about their own X, which the renderer handles
+  // correctly because the winding was never mirrored at the geometry level.
+  arm.scale.set(mirror ? -1 : 1, 1, 1);
+  if (socket) {
+    const local = new THREE.Vector3(...FIST_CENTRE);
+    local.x *= mirror ? -1 : 1;
+    arm.position.copy(new THREE.Vector3(...socket)).sub(local.applyQuaternion(arm.quaternion));
+  }
+  return arm;
+}
+
 /** A shoulder-to-wrist arm assembled from the parts above. */
 export function buildArm(mats, opts = {}) {
   const THREE = mats._three;
   const arm = new THREE.Group();
+  // Wrist-first, so z = 0 is the hand and the sleeve runs back along +Z.
   const forearm = buildForearm(mats, opts);
-  /**
-   * The sleeve is a lathe authored 0..len along +Z, wide end first. In an arm
-   * group whose origin is the wrist, it has to occupy z = 0 .. +len, narrowing
-   * toward z = 0. `buildForearm` already narrows as t rises, so the geometry
-   * only needs to be flipped in Z — and flipping Z alone (scale.z = -1) is
-   * what keeps it on the camera's axis instead of spinning it out sideways.
-   * Rotating by PI about Y here would also negate X, which is the bug that put
-   * a slab across the weapon.
-   */
-  forearm.scale.z = -1;
-  forearm.position.z = 0;
   arm.add(forearm);
   const cuff = buildCuff(mats);
-  cuff.position.z = 0.008;
+  cuff.position.z = 0.004;
   arm.add(cuff);
   const glove = buildGlove(mats, { scale: opts.scale ?? 1, grip: opts.grip });
-  glove.root.position.z = -0.01;
+  glove.root.position.z = -0.012;
   arm.add(glove.root);
   return { arm, glove, forearm };
 }

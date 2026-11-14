@@ -343,37 +343,11 @@ export function buildMk18() {
   });
 
   /* ---------------------------------------------------------------------- */
-  /*  magazine (animated on reload)                                          */
+  /*  magazine                                                               */
   /* ---------------------------------------------------------------------- */
-  // STANAG curve: five segments, each rotated a little more than the last.
-  const magParts = [];
-  for (let i = 0; i < 5; i++) {
-    const t = i / 5;
-    const seg = box(0.0265, 0.038, 0.062 - t * 0.004, 0.0018, 3, 2);
-    seg.translate(0, -0.019 - i * 0.0375, 0.004 + Math.pow(t, 1.7) * 0.03);
-    seg.rotateX(-0.06 * i);
-    magParts.push(seg);
-  }
-  const magBody = mergeAll(magParts);
-  // Witness holes down the spine: five, evenly spaced.
-  for (let i = 0; i < 5; i++) {
-    const hole = latheZ(
-      [
-        [0, 0.0022],
-        [0.0016, 0.0022],
-        [0.0018, 0],
-      ],
-      8,
-    );
-    hole.rotateZ(Math.PI / 2);
-    hole.translate(-0.0132, -0.03 - i * 0.03, 0.006 + i * 0.006);
-    a.add(hole, 'brass');
-  }
-  // Floorplate.
-  const floor = box(0.03, 0.008, 0.066, 0.002, 3, 2);
-  floor.translate(0, -0.196, 0.032);
-  a.add(magBody, 'polymer');
-  a.add(floor, 'polymer');
+  // Emitted by `viewmodel.js` into `magPart`, not into a static bucket: it is
+  // an animated part and a second static copy would sit frozen in the magwell
+  // while the reload moved the real one out of it.
 
   /* ---------------------------------------------------------------------- */
   /*  optic: EOTech-style holographic sight                                  */
@@ -444,7 +418,7 @@ export function buildMk18() {
   a.node('laserEmitter', 0.033, 0.004, hgZ - 0.012);
   a.node('flashlight', 0.033, 0.004, hgZ - 0.012);
   a.node('gripRight', 0, -0.09, 0.09);
-  a.node('gripLeft', 0, 0, -hgZ + 0.02);
+  a.node('gripLeft', 0, -0.03, hgZ + 0.02);
 
   return { ...a.build(), dim: D, muzzleZ, opticY };
 }

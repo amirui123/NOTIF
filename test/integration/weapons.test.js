@@ -43,6 +43,65 @@ const REQUIRED = [
   'leftRestRot',
 ];
 
+/** Every mesh under `root`, skipping nothing. */
+function allMeshes(root) {
+  const out = [];
+  root.traverse((o) => {
+    if (o.isMesh) out.push(o);
+  });
+  return out;
+}
+
+/** True when any ancestor of `o` is one of the arm groups. */
+function insideArm(o) {
+  for (let p = o; p; p = p.parent) if (p.userData?.arm) return true;
+  return false;
+}
+
+/**
+ * Fraction of a mesh's triangles whose winding normal agrees with its vertex
+ * normals. 1.0 = consistently wound, 0.0 = inverted. Validated against a
+ * control: a Box, Sphere and Cylinder all score 1.0, and a Box with its index
+ * order flipped scores 0.0.
+ */
+function windingAgreement(mesh, THREE) {
+  const g = mesh.geometry;
+  const pos = g.getAttribute('position');
+  const nrm = g.getAttribute('normal');
+  if (!nrm) return 1;
+  const idx = g.getIndex();
+  const count = idx ? idx.count : pos.count;
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const ab = new THREE.Vector3();
+  const ac = new THREE.Vector3();
+  const cross = new THREE.Vector3();
+  const n = new THREE.Vector3();
+  let agree = 0;
+  let total = 0;
+  for (let i = 0; i < count; i += 3) {
+    const ia = idx ? idx.getX(i) : i;
+    const ib = idx ? idx.getX(i + 1) : i + 1;
+    const ic = idx ? idx.getX(i + 2) : i + 2;
+    a.fromBufferAttribute(pos, ia);
+    b.fromBufferAttribute(pos, ib);
+    c.fromBufferAttribute(pos, ic);
+    ab.subVectors(b, a);
+    ac.subVectors(c, a);
+    if (ab.lengthSq() < 1e-18 || ac.lengthSq() < 1e-18) continue;
+    cross.crossVectors(ab, ac);
+    if (cross.lengthSq() < 1e-18) continue;
+    n.fromBufferAttribute(nrm, ia)
+      .add(new THREE.Vector3().fromBufferAttribute(nrm, ib))
+      .add(new THREE.Vector3().fromBufferAttribute(nrm, ic));
+    if (n.lengthSq() < 1e-18) continue;
+    total++;
+    if (cross.dot(n) > 0) agree++;
+  }
+  return total ? agree / total : 1;
+}
+
 describe('weapon viewmodels', () => {
   let tex;
   let buildViewmodel;
@@ -111,28 +170,135 @@ describe('weapon viewmodels', () => {
     }
   });
 
-  it('keeps the optic axis inside the ADS framing window', async () => {
-    // The viewmodel is parented to the camera at `adsPos` when aiming, so the
-    // optic's own height in weapon-local space is what lands on the screen
-    // centre. What has to be a real number is the angular offset: eye relief
-    // divided by the optic height gives the angle the gun has to be canted to
-    // put the reticle on the crosshair, and it must stay small enough that the
-    // shooter still sees down the tube rather than at the receiver's side.
+  it('winds every mesh the same way round', async () => {
+    // Inside-out surfaces are the single most damaging modelling bug here: the
+    // gun still silhouettes correctly, so it survives every "does it look like
+    // a rifle" check, but it lights wrong and the shading turns into stripes.
+    //
+    // Signed volume cannot see it (these meshes are open shells), so this
+    // measures how often each triangle's winding normal agrees with its vertex
+    // normals. A correct mesh scores 1.0; a fully inverted one scores 0.0.
+    const THREE = await import('three');
+    for (const id of WEAPON_IDS) {
+      const vm = buildViewmodel(id, OPERATORS[0], tex);
+      try {
+        for (const mesh of allMeshes(vm.root)) {
+          const ratio = windingAgreement(mesh, THREE);
+          assert.ok(ratio >= 0.85, `${id}: a mesh is wound inside out (agreement ${ratio.toFixed(3)})`);
+        }
+      } finally {
+        vm.dispose();
+      }
+    }
+  });
+
+  it('has both hands actually holding the weapon', async () => {
+    // `gripRight` / `gripLeft` are sockets the weapon declares. A hand that is
+    // placed near one, or posed by hand-tuned Euler angles, floats clear of the
+    // gun — which reads as "the parts are right but it is not assembled".
+    //
+    // The glove is the fist, so measure the GLOVE against the weapon's own
+    // meshes. Including the sleeve would let a hand 20 cm out still pass,
+    // because some part of the arm is always near the gun.
+    const THREE = await import('three');
+    for (const id of WEAPON_IDS) {
+      const vm = buildViewmodel(id, OPERATORS[0], tex);
+      try {
+        vm.root.updateMatrixWorld(true);
+        const weaponPts = [];
+        for (const mesh of allMeshes(vm.root)) {
+          if (insideArm(mesh)) continue;
+          const pos = mesh.geometry.getAttribute('position');
+          const v = new THREE.Vector3();
+          for (let i = 0; i < pos.count; i++) {
+            weaponPts.push(v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).clone());
+          }
+        }
+        const arms = [];
+        vm.root.traverse((o) => {
+          if (o.userData.arm) arms.push(o);
+        });
+        assert.equal(arms.length, 2, `${id}: expected a firing hand and a support hand`);
+        for (const arm of arms) {
+          const side = arm.userData.arm;
+          const socket = new THREE.Vector3(...vm.nodes.get(`grip${side === 'right' ? 'Right' : 'Left'}`).pos);
+          const glove = arm.children.find((c) => c.isGroup) ?? arm;
+          const pts = [];
+          const box = new THREE.Box3();
+          for (const mesh of allMeshes(glove)) {
+            const pos = mesh.geometry.getAttribute('position');
+            const v = new THREE.Vector3();
+            for (let i = 0; i < pos.count; i++) {
+              const p = v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).clone();
+              pts.push(p);
+              box.expandByPoint(p);
+            }
+          }
+          let nearest = Infinity;
+          for (const p of pts) {
+            for (const q of weaponPts) {
+              const d = p.distanceToSquared(q);
+              if (d < nearest) nearest = d;
+            }
+          }
+          nearest = Math.sqrt(nearest);
+          assert.ok(
+            nearest < 0.012,
+            `${id}: ${side} hand is ${(nearest * 1000).toFixed(0)} mm off the weapon`,
+          );
+          // And the grip has to be inside the fist, not beside it.
+          const world = socket.clone().applyMatrix4(vm.gun.matrixWorld);
+          assert.ok(box.containsPoint(world), `${id}: ${side} hand is not wrapped around its grip`);
+        }
+      } finally {
+        vm.dispose();
+      }
+    }
+  });
+
+  it('puts the optic on the camera axis when aiming', async () => {
+    // The viewmodel is parented to the camera, so at the ADS pose the optic's
+    // own axis has to land ON the view axis: that is what makes the reticle sit
+    // under the crosshair instead of somewhere over the receiver.
+    //
+    // This used to be checked indirectly, as the angle the gun would have to be
+    // canted by — optic height over the distance to the weapon's ORIGIN. That
+    // proxy broke the moment `adsPos` started being solved from the optic
+    // socket rather than hand-tuned: the origin is now only 7 cm away while the
+    // optic itself sits a correct 9 cm down the axis, so the proxy reported a
+    // 41-degree cant for a gun that was aimed perfectly. Measure the thing that
+    // actually matters instead.
     const WEAPONS = (await import(join(ROOT, 'src/config.js'))).WEAPONS;
     for (const id of WEAPON_IDS) {
       const vm = buildViewmodel(id, OPERATORS[0], tex);
       try {
         const spec = WEAPONS[id];
-        const eyeRelief = Math.abs(spec.adsPos[2]);
         const axis = vm.opticY;
         assert.ok(
           axis > 0.025 && axis < 0.11,
           `${id}: optic axis ${axis.toFixed(3)} m is not a sight height`,
         );
-        const cant = Math.atan2(axis, eyeRelief);
-        assert.ok(cant < 0.5, `${id}: needs ${(cant * 57.3).toFixed(1)} deg of cant to aim`);
         // And the sight must actually sit above the bore, or it is not a sight.
         assert.ok(axis > 0.02, `${id}: optic ${axis.toFixed(3)} m over the bore`);
+
+        // At ADS the hip rotation is faded out, so the root carries no cant.
+        const optic = vm.nodes.get('opticAxis');
+        assert.ok(optic, `${id}: no opticAxis node to aim through`);
+        const at = new (await import('three')).Vector3(...optic.pos).add(
+          new (await import('three')).Vector3(...spec.adsPos),
+        );
+        assert.ok(
+          Math.abs(at.x) < 0.001 && Math.abs(at.y) < 0.001,
+          `${id}: optic lands at [${at.x.toFixed(4)}, ${at.y.toFixed(4)}] instead of on the axis`,
+        );
+        const relief = Math.abs(at.z);
+        assert.ok(
+          relief > 0.04 && relief < 0.16,
+          `${id}: eye relief ${(relief * 100).toFixed(1)} cm is not a head position`,
+        );
+        // The muzzle has to be downrange of the eye, not behind it.
+        const muzzleZ = vm.muzzleZ + spec.adsPos[2];
+        assert.ok(muzzleZ < -0.1, `${id}: muzzle only ${(-muzzleZ * 100).toFixed(0)} cm out front`);
       } finally {
         vm.dispose();
       }

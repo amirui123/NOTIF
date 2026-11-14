@@ -174,7 +174,7 @@ export function buildMp7() {
   a.node('laserEmitter', -0.021, -0.004, hgZ - 0.01);
   a.node('flashlight', -0.021, -0.004, hgZ - 0.01);
   a.node('gripRight', 0, -0.064, 0.054);
-  a.node('gripLeft', 0, -0.026, hgZ);
+  a.node('gripLeft', 0, -0.03, hgZ);
 
   return { ...a.build(), dim: D, muzzleZ: muzzleZ - 0.024, opticY: oy };
 }

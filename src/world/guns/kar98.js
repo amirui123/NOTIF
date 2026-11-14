@@ -320,7 +320,7 @@ export function buildKar98() {
   a.node('laserEmitter', 0.0, -0.02, D.receiverFront - 0.24);
   a.node('flashlight', 0.0, -0.02, D.receiverFront - 0.24);
   a.node('gripRight', 0, -0.03, 0.11);
-  a.node('gripLeft', 0, -0.004, D.receiverFront - 0.24);
+  a.node('gripLeft', 0, -0.026, D.receiverFront - 0.2);
 
   return { ...a.build(), dim: D, muzzleZ: flashZ, opticY: oy };
 }

@@ -241,7 +241,7 @@ export function buildM249() {
   a.node('laserEmitter', 0.031, 0.0, shroudZ + 0.02);
   a.node('flashlight', 0.031, 0.0, shroudZ + 0.02);
   a.node('gripRight', 0, -0.082, 0.088);
-  a.node('gripLeft', 0, -0.016, shroudZ + 0.04);
+  a.node('gripLeft', 0, -0.042, shroudZ + 0.04);
 
   return { ...a.build(), dim: D, muzzleZ: flashZ, opticY: oy };
 }

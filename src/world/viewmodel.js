@@ -43,7 +43,7 @@ import { buildMp7 } from './guns/mp7.js';
 import { buildP226 } from './guns/p226.js';
 import { buildM249 } from './guns/m249.js';
 import { buildKar98 } from './guns/kar98.js';
-import { buildArm } from './guns/hands.js';
+import { buildArm, poseHand } from './guns/hands.js';
 import { Assembly, box, tubeZ, rodZ, latheZ, mergeAll } from './gunkit.js';
 
 /** Scale an sRGB hex colour toward black, for viewmodel use. */
@@ -298,61 +298,75 @@ export function buildViewmodel(weaponId, operator, tex) {
   // Arms
   // ---------------------------------------------------------------------------
   const isPistol = weaponId === 'p226';
-  const isSniper = weaponId === 'kar98';
 
   /**
-   * Sleeve length is a framing decision, not an anatomical one.
+   * Arms.
    *
-   * A real forearm is 300-340 mm and that is what the first pass used, on
-   * every weapon. On a rifle it is fine — the arm runs back toward the camera
-   * and the receiver hides most of it. On a 196 mm pistol the arm is longer
-   * than the gun, so it fills the frame and you cannot see the weapon at all.
-   * Every shipped viewmodel shortens the arm on small weapons for exactly
-   * this reason.
+   * These were the worst of the assembly bugs: the hands were parked with
+   * hard-coded offsets that had nothing to do with where the weapon's grips
+   * actually are, so on every weapon they floated above the receiver instead
+   * of wrapping it.
+   *
+   * Both hands are now placed on the sockets the weapon builder declares —
+   * `gripRight` on the pistol grip, `gripLeft` on the handguard — and the arm
+   * group is rotated so the glove's -Z (its fingers) points across the grip
+   * and its +Y (the back of the hand) points outboard.
+   *
+   * Sleeve length is short on purpose. A viewmodel arm is nearly all
+   * off-screen: what is in frame is the hand, the cuff and maybe 80 mm of
+   * sleeve. The first pass used a full 340 mm forearm on every weapon, which
+   * is anatomically right and completely wrong for a 72-degree camera — it
+   * filled half the frame.
    */
-  // A pistol sits 0.27-0.29 m from the eye, so an arm running back toward the
-  // camera passes through the near plane within ~90 mm. Anything longer turns
-  // into a green cylinder across the whole frame.
-  const rightLen = isPistol ? 0.09 : 0.32;
-  const leftLen = isPistol ? 0.08 : 0.28;
-  const right = buildArm(mats, { length: rightLen, grip: true });
-  const left = buildArm(mats, { length: leftLen, grip: true });
-
-  // Right hand wraps the pistol grip; left hand supports the handguard.
   const gripRight = nodePos('gripRight', new THREE.Vector3(0, -0.09, 0.09));
-  right.arm.position.copy(gripRight);
-  /**
-   * Hand orientation, solved rather than guessed.
-   *
-   * The glove is authored with -Z along the fingers and +Y out of the back of
-   * the hand. To wrap a pistol grip the palm has to face inboard (-X) and the
-   * fingers have to point forward-and-in, which is a rotation of about
-   * (+, 0, -) — not the identity, and not a flat quarter turn. The previous
-   * value of (0.16, 0.1, -0.12) left the hand lying palm-down on top of the
-   * slide, which is what showed up as "a hand growing out of the top of the
-   * gun".
-   */
-  if (isPistol) {
-    right.arm.position.set(-0.012, -0.075, 0.062);
-    right.arm.rotation.set(1.55, 0.55, -1.25);
-  } else {
-    right.arm.rotation.set(1.15, 0.1, -0.12);
-  }
-  gun.add(right.arm);
+  const gripLeft = nodePos('gripLeft', new THREE.Vector3(0, -0.05, -0.2));
 
-  const leftRestPos = isPistol
-    ? new THREE.Vector3(-0.042, -0.085, 0.045)
-    : isSniper
-      ? new THREE.Vector3(-0.012, -0.058, -0.17)
-      : new THREE.Vector3(-0.014, -0.048, -0.2);
-  const leftRestRot = isPistol
-    ? new THREE.Euler(Math.PI / 2 - 0.1, -0.35, 0.1)
-    : new THREE.Euler(1.05, 0.32, 0.45);
-  left.arm.position.copy(leftRestPos);
-  left.arm.rotation.copy(leftRestRot);
-  gun.add(left.arm);
+  // ---- right hand: on the pistol grip -------------------------------------
+  // Directions only — the wrist position is solved from the socket by
+  // `poseHand`, so the fist closes on the grip instead of near it.
+  // Anatomical, not fitted. A right hand round a pistol grip has its palm
+  // against the inboard flank, the back of the hand outboard (+X), the thumb
+  // up (+Y) along the receiver, and the fingers wrapping forward and down. The
+  // glove is authored left-handed (thumb at +X), so the right hand is its
+  // mirror — exactly as a real pair of gloves is.
+  const RIGHT = {
+    forward: [0.16, -0.34, -0.93],
+    backOfHand: [0.94, 0.26, 0.16],
+    mirror: true,
+  };
+  // The support hand reaches across from below-left: fingers wrap up and
+  // inboard over the handguard, so the back of the hand faces the shooter's
+  // lower left and the sleeve falls away toward the shoulder.
+  const LEFT = {
+    forward: [0.52, 0.46, -0.72],
+    backOfHand: [-0.74, -0.62, 0.14],
+    mirror: false,
+  };
+  // Sleeves are deliberately short. What is in frame of a viewmodel arm is the
+  // hand, the cuff and maybe 60 mm of sleeve; a full forearm reaches the near
+  // plane and a 78 mm-diameter tube at 150 mm from the eye covers a quarter of
+  // the screen. Real FPS rigs hide the rest of the arm rather than model it.
+  const rightArm = buildArm(mats, {
+    length: isPistol ? 0.06 : 0.085,
+    grip: true,
+    rWrist: 0.028,
+    rElbow: 0.033,
+  });
+  rightArm.arm.userData._three = THREE;
+  rightArm.arm.userData.arm = 'right';
+  poseHand(rightArm.arm, RIGHT.forward, RIGHT.backOfHand, gripRight.toArray(), RIGHT.mirror);
+  gun.add(rightArm.arm);
 
-  const leftArm = left.arm;
+  // ---- left hand: support on the handguard --------------------------------
+  const leftArm = buildArm(mats, { length: 0.085, grip: true, rWrist: 0.028, rElbow: 0.033 });
+  leftArm.arm.userData._three = THREE;
+  leftArm.arm.userData.arm = 'left';
+  poseHand(leftArm.arm, LEFT.forward, LEFT.backOfHand, gripLeft.toArray(), LEFT.mirror);
+  gun.add(leftArm.arm);
+
+  // Kept for the reload and bolt animations, which move the support hand.
+  const leftRestPos = leftArm.arm.position.clone();
+  const leftRestRot = leftArm.arm.rotation.clone();
 
   // ---------------------------------------------------------------------------
   // Optic reticle
@@ -401,7 +415,7 @@ export function buildViewmodel(weaponId, operator, tex) {
     flashlight,
     laserLine,
     laserDot,
-    leftArm,
+    leftArm: leftArm.arm,
     leftRestPos,
     leftRestRot,
     opticY,

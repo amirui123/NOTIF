@@ -351,6 +351,11 @@ export class WeaponController {
     this.vm.magPart.rotation.set(0, 0, 0);
     this.vm.boltPart.position.z = 0.02;
     this.vm.boltPart.rotation.z = 0;
+    // The support hand is posed per weapon, on that weapon's own handguard
+    // socket, so every animation below moves it RELATIVE to its rest pose.
+    // Setting absolute coordinates here teleported the hand to a fixed point in
+    // weapon space, which on a pistol whose socket is 16 cm from a rifle's put
+    // the hand nowhere near the gun.
     this.vm.leftArm.position.copy(this.vm.leftRestPos);
     this.vm.leftArm.rotation.copy(this.vm.leftRestRot);
     if (this.vm.feedCoverPart) this.vm.feedCoverPart.rotation.x = 0;
@@ -378,11 +383,17 @@ export class WeaponController {
       if (progress > 0.15 && progress < 0.46) {
         const drop = (progress - 0.15) / 0.31;
         this.vm.magPart.position.set(0, -0.26 * drop, 0.03 * drop);
-        this.vm.leftArm.position.set(-0.03, -0.14 * drop, -0.05);
+        this.vm.leftArm.position.copy(this.vm.leftRestPos);
+        this.vm.leftArm.position.x += -0.03;
+        this.vm.leftArm.position.y += -0.14 * drop;
+        this.vm.leftArm.position.z += -0.05;
       } else if (progress >= 0.46 && progress < 0.74) {
         const insert = 1 - (progress - 0.46) / 0.28;
         this.vm.magPart.position.set(0, -0.26 * insert, 0.03 * insert);
-        this.vm.leftArm.position.set(-0.03, -0.14 * insert, -0.05);
+        this.vm.leftArm.position.copy(this.vm.leftRestPos);
+        this.vm.leftArm.position.x += -0.03;
+        this.vm.leftArm.position.y += -0.14 * insert;
+        this.vm.leftArm.position.z += -0.05;
       }
       // The ammunition transfer happens exactly once.
       if (progress > 0.72 && !this.reloadFlags.inserted) {
@@ -397,7 +408,10 @@ export class WeaponController {
       if (progress > 0.78 && progress < 0.94) {
         const boltPulse = Math.sin(((progress - 0.78) / 0.16) * Math.PI);
         this.vm.boltPart.position.z = 0.02 + 0.065 * boltPulse;
-        this.vm.leftArm.position.set(-0.02, 0.08, 0.02 + 0.05 * boltPulse);
+        this.vm.leftArm.position.copy(this.vm.leftRestPos);
+        this.vm.leftArm.position.x += -0.02;
+        this.vm.leftArm.position.y += 0.08;
+        this.vm.leftArm.position.z += 0.02 + 0.05 * boltPulse;
         if (!this.reloadFlags.bolt) {
           this.reloadFlags.bolt = true;
           this.sound.playFoley('boltPull');
@@ -464,10 +478,22 @@ export class WeaponController {
     const vz = THREE.MathUtils.lerp(hip[2], ads[2], this.adsAmt) + this.recoilZ + animPos.z;
 
     vm.root.position.set(vx, vy, vz);
+    /**
+     * The base pose is not upright.
+     *
+     * A first-person weapon is canted inboard at the muzzle and rolled so the
+     * shooter sees its left flank rather than staring down the bore. Without
+     * that cant the camera looks straight through the weapon's axis and what
+     * fills the frame is the butt-pad — which is what "the gun looks scrambled"
+     * turned out to be. `hipRot` is the rest pose; recoil, sway and the
+     * animation deltas sit on top of it, and it fades out as the player aims.
+     */
+    const rest = spec.hipRot ?? [0, 0, 0];
+    const aim = 1 - this.adsAmt;
     vm.root.rotation.set(
-      this.recoilPitch * 0.7 - this.sprintAmt * 0.25 + animRot.x,
-      this.sprintAmt * 0.65 + animRot.y,
-      this.sprintAmt * 0.25 + animRot.z,
+      rest[0] * aim + this.recoilPitch * 0.7 - this.sprintAmt * 0.25 + animRot.x,
+      rest[1] * aim + this.sprintAmt * 0.65 + animRot.y,
+      rest[2] * aim + this.sprintAmt * 0.25 + animRot.z,
     );
 
     vm.flashlight.intensity = this.lightOn ? 14 : 0;

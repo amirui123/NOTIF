@@ -23,7 +23,6 @@ import {
   picatinny,
   mlokSlot,
   serrations,
-  mergeAll,
 } from '../gunkit.js';
 
 export const DIM = {
@@ -218,7 +217,6 @@ export function buildHk416() {
     seg.rotateX(-0.06 * i);
     magParts.push(seg);
   }
-  a.add(mergeAll(magParts), 'polymer');
   for (let i = 0; i < 5; i++) {
     const hole = latheZ(
       [
@@ -300,7 +298,7 @@ export function buildHk416() {
   a.node('laserEmitter', 0.031, 0.0, hgZ + 0.002);
   a.node('flashlight', 0.031, 0.0, hgZ + 0.002);
   a.node('gripRight', 0, -0.093, 0.094);
-  a.node('gripLeft', 0, -0.03, hgZ - 0.06);
+  a.node('gripLeft', 0, -0.034, hgZ - 0.06);
 
   return { ...a.build(), dim: D, muzzleZ: muzzleZ - 0.04, opticY: oy };
 }

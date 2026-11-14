@@ -322,6 +322,63 @@ export function box(w, h, d, chamfer = 0.0012, seg = 2, rings = 2) {
   return stripDegenerate(normalize(g));
 }
 
+/**
+ * Flip a geometry's triangle winding in place.
+ *
+ * Mirrored parts — anything built with a negative-determinant transform — come
+ * out with their winding backwards relative to their vertex normals, so they
+ * light inside out. Flipping the triangle order puts it right again without
+ * touching the vertex data.
+ *
+ * @param {import('three').BufferGeometry} geo
+ * @returns {import('three').BufferGeometry} the same geometry
+ */
+export function reverseWinding(geo) {
+  const idx = geo.getIndex();
+  if (idx) {
+    const a = idx.array;
+    for (let i = 0; i < a.length; i += 3) {
+      const t = a[i];
+      a[i] = a[i + 2];
+      a[i + 2] = t;
+    }
+    idx.needsUpdate = true;
+    return geo;
+  }
+  // Non-indexed: swap the second and third vertex of every triangle, for every
+  // attribute, so position, normal, uv and tangent stay paired up.
+  for (const attr of Object.values(geo.attributes)) {
+    const a = attr.array;
+    const item = attr.itemSize;
+    const tmp = new Array(item);
+    for (let t = 0; t + 2 < attr.count; t += 3) {
+      const b = (t + 1) * item;
+      const c = (t + 2) * item;
+      for (let k = 0; k < item; k++) tmp[k] = a[b + k];
+      for (let k = 0; k < item; k++) {
+        a[b + k] = a[c + k];
+        a[c + k] = tmp[k];
+      }
+    }
+    attr.needsUpdate = true;
+  }
+  return geo;
+}
+
+/**
+ * Mirror a geometry about its own X axis and keep it wound correctly.
+ *
+ * `scale(-1, 1, 1)` on its own produces an inside-out mesh; this is the version
+ * to reach for when a left-side part has to be derived from a right-side one.
+ *
+ * @param {import('three').BufferGeometry} geo
+ * @returns {import('three').BufferGeometry} the same geometry
+ */
+export function unmirror(geo) {
+  geo.scale(-1, 1, 1);
+  return reverseWinding(geo);
+}
+
 /** A softly rounded block: grips, palm swells, butt pads. */
 export function blob(w, h, d, radius = 0.006, seg = 2) {
   return box(w, h, d, radius, seg);
@@ -335,10 +392,16 @@ export function blob(w, h, d, radius = 0.006, seg = 2) {
 export function latheZ(profile, seg = 24) {
   const pts = profile.map((p) => new THREE.Vector2(Math.max(1e-5, p[1]), p[0]));
   const g = new THREE.LatheGeometry(pts, seg);
-  // Lathe spins around +Y; a -90 degree rotation about X maps (r, a) -> (r, 0, a)
+  // Lathe spins around +Y; a +90 degree rotation about X maps (r, a) -> (r, 0, a)
   // so the axis becomes +Z with the axial coordinates preserved.
-  g.rotateX(-Math.PI / 2);
-  g.scale(1, 1, -1);
+  //
+  // This used to be rotateX(-PI/2) followed by scale(1, 1, -1) to flip the axis
+  // back round. That scale has a negative determinant: it mirrors the mesh, so
+  // every lathed surface in the game — finger segments, sleeves, barrels,
+  // muzzle devices, optic tubes — came out wound inside out, lit wrong and
+  // read as zebra stripes. Author the geometry the right way round instead of
+  // mirroring it afterwards.
+  g.rotateX(Math.PI / 2);
   return normalize(g);
 }
 
@@ -642,6 +705,10 @@ export class Assembly {
         q,
         new THREE.Vector3(t.sx ?? 1, t.sy ?? 1, t.sz ?? 1),
       );
+      // A negative-determinant matrix mirrors the mesh: the normals invert and
+      // the winding flips with them. Fix it here rather than letting a caller
+      // hand in a mirrored part and get a black-inside gun.
+      if (m.determinant() < 0) reverseWinding(g);
       g.applyMatrix4(m);
     }
     normalize(g);

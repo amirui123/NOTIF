@@ -219,7 +219,7 @@ export function buildP226() {
   a.node('laserEmitter', 0, frameY - 0.014, -0.055);
   a.node('flashlight', 0, frameY - 0.014, -0.055);
   a.node('gripRight', 0, -0.062, 0.058);
-  a.node('gripLeft', 0, -0.05, 0.04);
+  a.node('gripLeft', 0, -0.058, 0.03);
 
   return { ...a.build(), dim: D, muzzleZ, opticY: D.opticAxisY };
 }
