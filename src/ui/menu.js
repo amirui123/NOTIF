@@ -37,6 +37,7 @@ export class Menu {
 
     this.buildOperators();
     this.bind();
+    this.bindFocusTrap();
     this.applySettingsToInputs();
   }
 
@@ -121,24 +122,57 @@ export class Menu {
     });
 
     this.btnDeploy?.addEventListener('click', () => this.onDeploy());
-    this.btnRestart?.addEventListener('click', () => this.onRestart());
+    this.btnRestart?.addEventListener('click', () => {
+      if (!window.confirm('Abandon this mission and deploy a fresh operator?')) return;
+      this.onRestart();
+    });
   }
 
   show({ paused = false, gameOver = false } = {}) {
     this.overlay.classList.remove('hidden');
+    this.overlay.classList.toggle('is-paused', paused && !gameOver);
     this.summaryBox.classList.toggle('show', gameOver);
     this.btnDeploy.textContent = gameOver
       ? 'REDEPLOY INTO SECTOR-7'
       : paused
         ? 'RESUME MISSION'
         : 'DEPLOY INTO SECTOR-7';
+    // "New deployment" only makes sense from the pause screen; the game-over
+    // screen already redeploys through the primary button.
     this.btnRestart.hidden = !paused || gameOver;
+
+    // Pausing is not a fresh start: keep the mission summary out of the way and
+    // return focus to the primary action so keyboard users are not stranded.
+    if (paused && !gameOver) this.btnDeploy.focus({ preventScroll: true });
   }
 
   hide() {
     this.overlay.classList.add('hidden');
     this.summaryBox.classList.remove('show');
     this.btnRestart.hidden = true;
+  }
+
+  /**
+   * Keep Tab inside the dialog while it is open. Without this the focus ring
+   * disappears behind the overlay into the HUD, which is invisible.
+   */
+  bindFocusTrap() {
+    this.overlay.addEventListener('keydown', (event) => {
+      if (event.code !== 'Tab' || this.overlay.classList.contains('hidden')) return;
+      const items = [
+        ...this.overlay.querySelectorAll('button, select, input, [tabindex]:not([tabindex="-1"])'),
+      ].filter((node) => !node.hidden && node.offsetParent !== null);
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
   }
 
   showGameOver(stats) {

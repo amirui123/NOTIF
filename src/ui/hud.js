@@ -43,10 +43,12 @@ export class Hud {
       osdFps: document.getElementById('osd-fps'),
       osdUnit: document.getElementById('osd-unit'),
       bodycam: document.getElementById('bodycam-osd'),
+      vitals: document.getElementById('vitals-panel'),
       hud: document.getElementById('hud'),
     };
 
     this._cache = Object.create(null);
+    this.rendererTag = 'WEBGL2';
     this._hitmarkerTimer = 0;
     this._promptTimer = 0;
     this._bannerTimer = 0;
@@ -55,9 +57,18 @@ export class Hud {
   }
 
   buildCompass() {
-    const marks = ['N', '·', 'NE', '·', 'E', '·', 'SE', '·', 'S', '·', 'SW', '·', 'W', '·', 'NW', '·'];
-    this.el.compassStrip.textContent = [...marks, ...marks, ...marks].join('   ');
+    // One tick per 15°, three full turns so the strip is wider than the
+    // viewport at every bearing. The old version joined cardinal labels with
+    // spaces, so the spacing never matched the 1.45 px/degree transform and the
+    // compass drifted away from the true heading.
+    const marks = ['N', '', 'NNE', '', 'NE', '', 'ENE', '', 'E', '', 'ESE', '', 'SE', '', 'SSE', ''];
+    marks.push('', 'S', '', 'SSW', '', 'SW', '', 'WSW', '', 'W', '', 'WNW', '', 'NW', '', 'NNW', '');
+    this.compassCells = [...marks, ...marks, ...marks];
+    this.el.compassStrip.textContent = this.compassCells.join('  ');
   }
+
+  /** Pixels per degree — matches the CSS font metrics of the strip. */
+  static COMPASS_SCALE = 1.9;
 
   showPlaying() {
     this.el.hud.classList.add('active');
@@ -80,6 +91,7 @@ export class Hud {
     this.#write('hp', Math.round(player.hp), (v) => {
       setText('hp-val', v);
       if (this.el.hpFill) this.el.hpFill.style.width = `${(player.hp / player.maxHp) * 100}%`;
+      if (this.el.vitals) this.el.vitals.classList.toggle('critical', v / player.maxHp <= 0.3);
     });
     this.#write('armor', Math.round(player.armor), (v) => {
       setText('armor-val', v);
@@ -116,6 +128,8 @@ export class Hud {
     // Crosshair bloom + ADS fade.
     this.#write('crosshair', `${Math.round(state.adsFade * 100)}|${Math.round(spread * 1000)}`, () => {
       if (this.el.crosshair) this.el.crosshair.style.opacity = String(state.adsFade);
+      // Max gap is 14 px: the crosshair box is 64 px with 8 px ticks, so a
+      // larger value would push the ticks outside the container and clip them.
       const gap = clamp(Math.round(14 - spread * 280), 2, 14);
       if (this.el.chTop) this.el.chTop.style.top = `${gap}px`;
       if (this.el.chBot) this.el.chBot.style.bottom = `${gap}px`;
@@ -123,13 +137,17 @@ export class Hud {
       if (this.el.chRight) this.el.chRight.style.right = `${gap}px`;
     });
 
-    // Compass.
-    const bearing = formatBearing(player.yaw);
-    this.#write('bearing', bearing, (v) => {
+    // Compass. `formatBearing` returns '000° N'-style text; the numeric part is
+    // what both the label and the strip need.
+    const bearingText = formatBearing(player.yaw);
+    this.#write('bearing', bearingText, (v) => {
       setText('bearing-val', v);
-      const deg = Number.parseFloat(v);
+      const deg = Number.parseFloat(v) || 0;
       if (this.el.compassStrip) {
-        this.el.compassStrip.style.transform = `translateX(${-deg * 1.45 + 150}px)`;
+        // 48 ticks per turn × 2 px spacing ≈ 1.9 px/degree.
+        const width = this.el.compassStrip.parentElement?.clientWidth ?? 300;
+        const offset = width / 2 - deg * Hud.COMPASS_SCALE;
+        this.el.compassStrip.style.transform = `translateX(${offset}px)`;
       }
     });
 
@@ -149,12 +167,19 @@ export class Hud {
     const clock = new Date().toLocaleTimeString('en-GB', { hour12: false });
     if (clock !== this._lastClock) {
       this._lastClock = clock;
-      setText('osd-time', new Date().toISOString().replace('T', ' ').slice(0, 19));
+      // The bodycam OSD should show the operator's local clock, not UTC.
+      setText('osd-time', clock);
     }
   }
 
   setFps(fps) {
-    this.#write('fps', fps, (v) => setText('osd-fps', `${v} FPS | BAT 94%`));
+    // No battery API access from a sandboxed page on most browsers, so the OSD
+    // reports the renderer instead of inventing a battery level.
+    this.#write('fps', fps, (v) => setText('osd-fps', `${v} FPS | ${this.rendererTag}`));
+  }
+
+  setRenderer(tag) {
+    this.rendererTag = tag;
   }
 
   setUnit(tag) {

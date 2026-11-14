@@ -79,6 +79,7 @@ export class Game {
     this.enemies = new EnemyManager(this.scene, this.level, this.tex, this.sound, this.fx);
     this.player = new Player(this.level, this.sound);
     this.hud = new Hud();
+    this.hud.setRenderer('WEBGL2');
 
     this.weapon = new WeaponController({
       camera: this.camera,
@@ -221,7 +222,17 @@ export class Game {
   // ------------------------------------------------------------- wiring
 
   bindWindowEvents() {
-    this._onResize = () => this.#syncViewport();
+    this._onResize = () => {
+      // Coalesce bursts of resize events (window drag, zoom) into one update.
+      if (this._resizeRaf) return;
+      this._resizeRaf = requestAnimationFrame(() => {
+        this._resizeRaf = 0;
+        // devicePixelRatio changes when the window moves between monitors or the
+        // OS scale changes; without re-applying quality the canvas stays soft.
+        if (this.quality) this.#applyQuality(this.quality);
+        else this.#syncViewport();
+      });
+    };
     window.addEventListener('resize', this._onResize);
 
     this._onVisibility = () => {
@@ -235,14 +246,41 @@ export class Game {
   }
 
   #setLockBanner(visible) {
-    document.getElementById('lock-banner')?.classList.toggle('show', visible);
+    const banner = document.getElementById('lock-banner');
+    if (!banner) return;
+    banner.classList.toggle('show', visible);
+    if (visible) banner.focus({ preventScroll: true });
+  }
+
+  /**
+   * The "click to capture" overlay is the only way back into the mission when
+   * the browser drops pointer lock, so it needs a real click/keyboard handler.
+   */
+  #bindLockBanner() {
+    const banner = document.getElementById('lock-banner');
+    if (!banner) return;
+    const engage = () => {
+      if (!this.state.playing || this.state.gameOver) return;
+      this.#setLockBanner(false);
+      this.sound.resume();
+      this.input.enabled = true;
+      this.requestLock();
+    };
+    banner.addEventListener('click', engage);
+    banner.addEventListener('keydown', (event) => {
+      if (event.code === 'Enter' || event.code === 'Space') {
+        event.preventDefault();
+        engage();
+      }
+    });
   }
 
   bindInput() {
     const input = this.input;
     input.connect();
+    this.#bindLockBanner();
 
-    input.onMove = (dx, dy) => {
+    input.onMove((dx, dy) => {
       if (!this.state.playing || this.state.paused || this.state.gameOver) return;
       const sensitivity = 0.002 * this.sens * (this.player.adsAmt > 0.5 ? 0.58 : 1);
       this.player.yaw -= dx * sensitivity;
@@ -250,9 +288,9 @@ export class Game {
       this.player.swayX = clamp(this.player.swayX - dx * sensitivity * 0.45, -0.045, 0.045);
       this.player.swayY = clamp(this.player.swayY + dy * sensitivity * 0.45, -0.045, 0.045);
       this.weapon.setSway(this.player.swayX, this.player.swayY);
-    };
+    });
 
-    input.onMouseButton = (button, down) => {
+    input.onMouseButton((button, down) => {
       if (!this.state.playing || this.state.paused || this.state.gameOver) return;
       if (button === 0) {
         this.triggerHeld = down;
@@ -260,18 +298,18 @@ export class Game {
         if (down) this.sound.resume();
       }
       if (button === 2) this.adsHeld = down;
-    };
+    });
 
-    input.onLockChange = (locked) => {
+    input.onLockChange((locked) => {
       const needsCapture = !locked && !input.fallbackLook;
       this.#setLockBanner(needsCapture && this.state.playing && !this.state.paused && !this.state.gameOver);
       if (locked) this.sound.resume();
-    };
+    });
 
-    input.onWheel = () => {
+    input.onWheel((direction) => {
       if (!this.state.playing || this.state.paused) return;
-      this.weapon.cycleSlot();
-    };
+      this.weapon.cycleSlot(direction);
+    });
 
     const action = (code, fn) => input.onAction(code, fn);
     action('KeyC', () => this.player.toggleCrouch());
@@ -391,6 +429,7 @@ export class Game {
   #applyQuality(quality) {
     const preset = QUALITY_PRESETS[quality] ?? QUALITY_PRESETS.high;
     this.quality = quality;
+    this.qualityPreset = preset;
     const pixelRatio = Math.min(preset.pixelRatio, window.devicePixelRatio || 1);
     this.renderer.setPixelRatio(pixelRatio);
     this.composer.setPixelRatio(pixelRatio);
@@ -775,6 +814,7 @@ export class Game {
   dispose() {
     cancelAnimationFrame(this.frameId);
     window.removeEventListener('resize', this._onResize);
+    if (this._resizeRaf) cancelAnimationFrame(this._resizeRaf);
     document.removeEventListener('visibilitychange', this._onVisibility);
     this.input.dispose();
     this.input.releaseLock();

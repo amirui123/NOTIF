@@ -473,10 +473,31 @@ canvas.game-canvas {
   transition: width 0.15s;
 }
 #hp-fill {
-  background: linear-gradient(90deg, #ef4444, #22c55e);
+  /* Sized to the track, not the fill, so the red→green ramp reads as a state
+     colour instead of re-scaling on every damage tick. */
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 45%, #22c55e 100%);
+  background-size: 235px 100%;
+  background-repeat: no-repeat;
 }
 #armor-fill {
   background: linear-gradient(90deg, #0284c7, #38bdf8);
+  background-size: 235px 100%;
+  background-repeat: no-repeat;
+}
+
+/* Low-health pulse: only when critically hurt, and killed by reduced motion */
+#vitals-panel.critical {
+  border-color: rgba(239, 68, 68, 0.65);
+  animation: criticalPulse 1.25s ease-in-out infinite;
+}
+@keyframes criticalPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(239, 68, 68, 0);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.35);
+  }
 }
 
 #weapon-panel {
@@ -828,6 +849,14 @@ input[type='range'] {
   color: rgba(148, 163, 184, 0.7);
 }
 
+/* Pause screen: dim the mission-header chrome so the resume action reads first */
+#menu-overlay.is-paused .menu-meta {
+  opacity: 0.45;
+}
+#menu-overlay.is-paused .action-bar {
+  border-top-color: rgba(245, 158, 11, 0.45);
+}
+
 #summary-box {
   display: none;
   margin-bottom: 14px;
@@ -861,6 +890,9 @@ input[type='range'] {
   inset: 0;
   z-index: 15;
   display: none;
+  /* #hud is pointer-events:none, and this element used to live inside it, so
+     the "click to capture" target could never actually be clicked. */
+  pointer-events: auto;
   align-items: center;
   justify-content: center;
   padding: 20px;
@@ -870,6 +902,10 @@ input[type='range'] {
 }
 #lock-banner.show {
   display: flex;
+}
+#lock-banner:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -4px;
 }
 #lock-banner > div {
   padding: 18px 28px;
@@ -983,8 +1019,23 @@ input[type='range'] {
   #vitals-panel {
     left: 12px;
     bottom: 12px;
-    min-width: 170px;
+    min-width: 150px;
     padding: 10px 12px;
+  }
+  #action-prompt {
+    bottom: 34%;
+    font-size: 11px;
+  }
+  #center-banner {
+    top: 30%;
+  }
+  #banner-main {
+    font-size: 20px;
+    letter-spacing: 2px;
+  }
+  #banner-sub {
+    font-size: 11px;
+    letter-spacing: 1px;
   }
   #mission-pill {
     top: 58px;
@@ -1004,6 +1055,13 @@ input[type='range'] {
   #compass-wrap {
     width: 210px;
   }
+  #bearing-val {
+    top: 42px;
+    font-size: 10px;
+  }
+  .cam-corner {
+    display: none;
+  }
   .menu-shell {
     padding: 16px;
   }
@@ -1013,8 +1071,32 @@ input[type='range'] {
   }
 }
 
+@media (max-height: 620px) {
+  #controls-mini {
+    display: none;
+  }
+  #mission-pill {
+    top: 54px;
+    padding: 6px 10px;
+  }
+  #mission-pill .big {
+    font-size: 13px;
+  }
+  #vitals-panel,
+  #weapon-panel {
+    bottom: 14px;
+    padding: 8px 12px;
+  }
+  #ammo-mag {
+    font-size: 26px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rec-dot {
+    animation: none;
+  }
+  #vitals-panel.critical {
     animation: none;
   }
   .kf-item {

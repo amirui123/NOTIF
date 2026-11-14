@@ -261,6 +261,7 @@ export class WeaponController {
   }
 
   /** Next slot in the loadout (mouse wheel / number keys). */
+  /** Toggle primary/sidearm. A direction hint is accepted for API symmetry. */
   cycleSlot() {
     this.switchSlot(this.activeSlot === 0 ? 1 : 0);
   }
