@@ -18,6 +18,12 @@ import { angleDelta, clamp } from '../core/math.js';
 
 const LOS_INTERVAL = 0.12;
 
+/** Collision capsule shared by every archetype (matches the rig height). */
+const ENEMY_HEIGHT = 1.7;
+const ENEMY_RADIUS = 0.44;
+/** Height an enemy can walk up without a jump. */
+const STEP_HEIGHT = 0.55;
+
 export class EnemyManager {
   /**
    * @param {THREE.Scene} scene
@@ -263,15 +269,19 @@ export class EnemyManager {
       armRig.add(glintSprite);
     }
 
+    // Hit volumes are laid out to overlap slightly, so a shot that threads the
+    // seam between two boxes still counts. They used to leave a 7.5 cm hole at
+    // waist height and a 4 cm gap at the neck: shots at chest level fell
+    // straight through the model.
     const hitboxMat = mats.hitbox;
-    const headHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), hitboxMat);
+    const headHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.34, 0.3), hitboxMat);
     headHitbox.position.y = 0.13;
     headGroup.add(headHitbox);
-    const torsoHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.56, 0.34), hitboxMat);
-    torsoHitbox.position.y = 0.28;
+    const torsoHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.66, 0.36), hitboxMat);
+    torsoHitbox.position.y = 0.2;
     spine.add(torsoHitbox);
-    const legsHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.85, 0.32), hitboxMat);
-    legsHitbox.position.y = -0.45;
+    const legsHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.95, 0.34), hitboxMat);
+    legsHitbox.position.y = -0.4;
     hips.add(legsHitbox);
 
     const enemy = {
@@ -309,6 +319,12 @@ export class EnemyManager {
       radioCooldown: 2 + Math.random() * 4,
       losTimer: Math.random() * LOS_INTERVAL,
       hasLOS: false,
+      lastX: 0,
+      lastZ: 0,
+      stuckTimer: 0,
+      strafeDir: 0,
+      detourDir: null,
+      detourTimer: 0,
     };
 
     headHitbox.userData = { enemy, zone: 'head' };
@@ -536,16 +552,93 @@ export class EnemyManager {
         wantCrouch = 0.25;
       }
 
+      if (enemy.detourTimer > 0 && moveVec.lengthSq() > 0.01) {
+        // Blend strongly toward the detour direction while it is active.
+        moveVec
+          .multiplyScalar(0.25)
+          .addScaledVector(enemy.detourDir ?? new THREE.Vector3(), 0.75)
+          .normalize();
+      }
+
       const moving = moveVec.lengthSq() > 0.01;
       if (moving) {
         const step = enemy.cfg.speed * dt;
         const nextX = pos.x + moveVec.x * step;
         const nextZ = pos.z + moveVec.z * step;
-        if (!this.level.collides(nextX, pos.z, pos.y, 1.7, 0.44)) pos.x = nextX;
-        if (!this.level.collides(pos.x, nextZ, pos.y, 1.7, 0.44)) pos.z = nextZ;
+        const okX = !this.level.collides(nextX, pos.z, pos.y, ENEMY_HEIGHT, ENEMY_RADIUS);
+        const okZ = !this.level.collides(pos.x, nextZ, pos.y, ENEMY_HEIGHT, ENEMY_RADIUS);
+        if (okX) pos.x = nextX;
+        if (okZ) pos.z = nextZ;
+
+        // Low ledges, kerbs and sandbags block a straight collision test, which
+        // used to wedge enemies ten metres short of the player forever. If the
+        // only obstacle is shin-height, climb it.
+        if (!okX || !okZ) {
+          const ahead = this.level.getFloorHeight(
+            pos.x + moveVec.x * (ENEMY_RADIUS + 0.15),
+            pos.z + moveVec.z * (ENEMY_RADIUS + 0.15),
+            pos.y + STEP_HEIGHT + 0.01,
+          );
+          if (ahead - pos.y > 0.05 && ahead - pos.y <= STEP_HEIGHT) {
+            const climbX = this.level.collides(nextX, pos.z, ahead, ENEMY_HEIGHT, ENEMY_RADIUS);
+            const climbZ = this.level.collides(pos.x, nextZ, ahead, ENEMY_HEIGHT, ENEMY_RADIUS);
+            if (!climbX) pos.x = nextX;
+            if (!climbZ) pos.z = nextZ;
+            if (!climbX || !climbZ) pos.y = ahead;
+          }
+        }
+
         pos.x = clamp(pos.x, -46, 46);
         pos.z = clamp(pos.z, -46, 46);
         pos.y = this.level.getFloorHeight(pos.x, pos.z, pos.y);
+
+        // Steering: an enemy that wants to move but has not for a moment picks
+        // a tangential detour and commits to it until it is moving again.
+        // Without this they walked into the first wall in a straight line from
+        // their spawn and vibrated there for the rest of the match.
+        const travelled = Math.hypot(pos.x - enemy.lastX, pos.z - enemy.lastZ);
+        enemy.lastX = pos.x;
+        enemy.lastZ = pos.z;
+        if (travelled < step * 0.3) {
+          enemy.stuckTimer = (enemy.stuckTimer ?? 0) + dt;
+          if (enemy.stuckTimer > 0.28 && enemy.detourTimer <= 0) {
+            // Choose the side with more free space, so it does not pinball
+            // between two walls.
+            const side = new THREE.Vector3(-moveVec.z, 0, moveVec.x).normalize();
+            if (!enemy.strafeDir) {
+              const probe = (dir) => {
+                let free = 0;
+                for (let d = 0.6; d <= 3.6; d += 0.6) {
+                  if (
+                    this.level.collides(
+                      pos.x + side.x * d * dir,
+                      pos.z + side.z * d * dir,
+                      pos.y,
+                      ENEMY_HEIGHT,
+                      ENEMY_RADIUS,
+                    )
+                  )
+                    break;
+                  free = d;
+                }
+                return free;
+              };
+              enemy.strafeDir = probe(1) >= probe(-1) ? 1 : -1;
+            }
+            enemy.detourDir = side.multiplyScalar(enemy.strafeDir);
+            enemy.detourTimer = 1.1 + Math.random() * 0.6;
+          }
+        } else {
+          enemy.stuckTimer = 0;
+          if (travelled > step * 0.9) {
+            // Moving freely again: drop the detour bias.
+            enemy.strafeDir = 0;
+          }
+        }
+
+        if (enemy.detourTimer > 0) {
+          enemy.detourTimer -= dt;
+        }
       }
 
       // Animation.

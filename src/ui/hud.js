@@ -43,10 +43,12 @@ export class Hud {
       osdFps: document.getElementById('osd-fps'),
       osdUnit: document.getElementById('osd-unit'),
       bodycam: document.getElementById('bodycam-osd'),
+      vitals: document.getElementById('vitals-panel'),
       hud: document.getElementById('hud'),
     };
 
     this._cache = Object.create(null);
+    this.rendererTag = 'WEBGL2';
     this._hitmarkerTimer = 0;
     this._promptTimer = 0;
     this._bannerTimer = 0;
@@ -54,10 +56,54 @@ export class Hud {
     this.buildCompass();
   }
 
+  /**
+   * Build the compass track as evenly spaced, absolutely positioned labels.
+   *
+   * It used to be a single text node whose spacing only *approximately* matched
+   * the px-per-degree offset used to scroll it, so the letter under the centre
+   * mark drifted away from the real heading (up to ~7% error, i.e. a whole
+   * 22.5° tick over a turn). Laying the labels out at exact 15° intervals makes
+   * the correspondence exact by construction.
+   */
   buildCompass() {
-    const marks = ['N', '·', 'NE', '·', 'E', '·', 'SE', '·', 'S', '·', 'SW', '·', 'W', '·', 'NW', '·'];
-    this.el.compassStrip.textContent = [...marks, ...marks, ...marks].join('   ');
+    const strip = this.el.compassStrip;
+    if (!strip) return;
+    strip.textContent = '';
+    const marks = [
+      'N',
+      'NNE',
+      'NE',
+      'ENE',
+      'E',
+      'ESE',
+      'SE',
+      'SSE',
+      'S',
+      'SSW',
+      'SW',
+      'WSW',
+      'W',
+      'WNW',
+      'NW',
+      'NNW',
+    ];
+    // Two copies so the -180..+180 window always has content on both sides.
+    for (let turn = 0; turn < 2; turn++) {
+      for (let i = 0; i < marks.length; i++) {
+        const tick = document.createElement('span');
+        tick.className = i % 4 === 0 ? 'c-tick major' : 'c-tick';
+        tick.textContent = marks[i];
+        // 360° / 16 marks = 22.5° per mark.
+        tick.style.left = `${(turn * 360 + i * 22.5) * Hud.COMPASS_SCALE}px`;
+        if (i === 0 && turn === 0) tick.textContent = marks[0];
+        strip.append(tick);
+      }
+    }
+    strip.style.width = `${2 * 360 * Hud.COMPASS_SCALE}px`;
   }
+
+  /** Pixels per degree. The tick positions use the same constant. */
+  static COMPASS_SCALE = 2;
 
   showPlaying() {
     this.el.hud.classList.add('active');
@@ -80,6 +126,7 @@ export class Hud {
     this.#write('hp', Math.round(player.hp), (v) => {
       setText('hp-val', v);
       if (this.el.hpFill) this.el.hpFill.style.width = `${(player.hp / player.maxHp) * 100}%`;
+      if (this.el.vitals) this.el.vitals.classList.toggle('critical', v / player.maxHp <= 0.3);
     });
     this.#write('armor', Math.round(player.armor), (v) => {
       setText('armor-val', v);
@@ -116,6 +163,8 @@ export class Hud {
     // Crosshair bloom + ADS fade.
     this.#write('crosshair', `${Math.round(state.adsFade * 100)}|${Math.round(spread * 1000)}`, () => {
       if (this.el.crosshair) this.el.crosshair.style.opacity = String(state.adsFade);
+      // Max gap is 14 px: the crosshair box is 64 px with 8 px ticks, so a
+      // larger value would push the ticks outside the container and clip them.
       const gap = clamp(Math.round(14 - spread * 280), 2, 14);
       if (this.el.chTop) this.el.chTop.style.top = `${gap}px`;
       if (this.el.chBot) this.el.chBot.style.bottom = `${gap}px`;
@@ -123,13 +172,17 @@ export class Hud {
       if (this.el.chRight) this.el.chRight.style.right = `${gap}px`;
     });
 
-    // Compass.
-    const bearing = formatBearing(player.yaw);
-    this.#write('bearing', bearing, (v) => {
+    // Compass. `formatBearing` returns '000° N'-style text; the numeric part is
+    // what both the label and the strip need.
+    const bearingText = formatBearing(player.yaw);
+    this.#write('bearing', bearingText, (v) => {
       setText('bearing-val', v);
-      const deg = Number.parseFloat(v);
+      const deg = Number.parseFloat(v) || 0;
       if (this.el.compassStrip) {
-        this.el.compassStrip.style.transform = `translateX(${-deg * 1.45 + 150}px)`;
+        const width = this.el.compassStrip.parentElement?.clientWidth ?? 300;
+        // 0° must land under the centre mark: shift by half the window, then
+        // scroll by the bearing at exactly COMPASS_SCALE pixels per degree.
+        this.el.compassStrip.style.transform = `translateX(${width / 2 - deg * Hud.COMPASS_SCALE}px)`;
       }
     });
 
@@ -149,12 +202,19 @@ export class Hud {
     const clock = new Date().toLocaleTimeString('en-GB', { hour12: false });
     if (clock !== this._lastClock) {
       this._lastClock = clock;
-      setText('osd-time', new Date().toISOString().replace('T', ' ').slice(0, 19));
+      // The bodycam OSD should show the operator's local clock, not UTC.
+      setText('osd-time', clock);
     }
   }
 
   setFps(fps) {
-    this.#write('fps', fps, (v) => setText('osd-fps', `${v} FPS | BAT 94%`));
+    // No battery API access from a sandboxed page on most browsers, so the OSD
+    // reports the renderer instead of inventing a battery level.
+    this.#write('fps', fps, (v) => setText('osd-fps', `${v} FPS | ${this.rendererTag}`));
+  }
+
+  setRenderer(tag) {
+    this.rendererTag = tag;
   }
 
   setUnit(tag) {
