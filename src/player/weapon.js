@@ -145,6 +145,33 @@ export class WeaponController {
 
   // ------------------------------------------------------------------ inputs
 
+  /**
+   * Random aim direction inside a cone of `spread` radians.
+   *
+   * The original added an independent random offset to each world axis, which
+   * is not a cone: the resulting error grew with |dir| and diagonal shots
+   * landed up to ~1.7x further out than intended, so aimed fire at 8 m could
+   * miss by a metre. Perturbing at a fixed radius around the true aim keeps
+   * the deviation exactly `spread` radians in every direction.
+   */
+  #spreadDirection(spread) {
+    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    if (spread <= 0) return dir;
+
+    // Build an orthonormal basis around the aim direction.
+    const up = Math.abs(dir.y) > 0.95 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3().crossVectors(dir, up).normalize();
+    const upAxis = new THREE.Vector3().crossVectors(right, dir).normalize();
+
+    // Uniform disc sample so the cone has a flat density profile.
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.sqrt(Math.random()) * spread;
+    return dir
+      .addScaledVector(right, Math.cos(angle) * radius)
+      .addScaledVector(upAxis, Math.sin(angle) * radius)
+      .normalize();
+  }
+
   tryFire() {
     if (this.state !== STATE.IDLE || this.fireTimer > 0) return false;
     const slot = this.currentSlot;
@@ -180,11 +207,7 @@ export class WeaponController {
       this.spreadExtra * (1 - this.adsAmt * 0.7) +
       spec.spreadMove * this.moveFactor * (1 - this.adsAmt * 0.6);
 
-    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-    dir.x += (Math.random() - 0.5) * spread;
-    dir.y += (Math.random() - 0.5) * spread;
-    dir.z += (Math.random() - 0.5) * spread;
-    dir.normalize();
+    const dir = this.#spreadDirection(spread);
 
     this._ray.set(this.camera.position, dir, 0.1, 180);
     const worldHits = this._ray.intersectObjects(this.level.rayMeshes, false);

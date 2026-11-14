@@ -263,15 +263,19 @@ export class EnemyManager {
       armRig.add(glintSprite);
     }
 
+    // Hit volumes are laid out to overlap slightly, so a shot that threads the
+    // seam between two boxes still counts. They used to leave a 7.5 cm hole at
+    // waist height and a 4 cm gap at the neck: shots at chest level fell
+    // straight through the model.
     const hitboxMat = mats.hitbox;
-    const headHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), hitboxMat);
+    const headHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.34, 0.3), hitboxMat);
     headHitbox.position.y = 0.13;
     headGroup.add(headHitbox);
-    const torsoHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.56, 0.34), hitboxMat);
-    torsoHitbox.position.y = 0.28;
+    const torsoHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.66, 0.36), hitboxMat);
+    torsoHitbox.position.y = 0.2;
     spine.add(torsoHitbox);
-    const legsHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.85, 0.32), hitboxMat);
-    legsHitbox.position.y = -0.45;
+    const legsHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.95, 0.34), hitboxMat);
+    legsHitbox.position.y = -0.4;
     hips.add(legsHitbox);
 
     const enemy = {
