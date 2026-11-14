@@ -44,4 +44,4 @@ jobs:
         run: node scripts/build.js
 
       - name: Validate workflows
-        run: npx --yes js-yaml .github/workflows/ci.yml .github/workflows/pages.yml > /dev/null
+        run: node scripts/check-workflows.js
