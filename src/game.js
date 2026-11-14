@@ -263,7 +263,8 @@ export class Game {
     };
 
     input.onLockChange = (locked) => {
-      this.#setLockBanner(!locked && this.state.playing && !this.state.paused && !this.state.gameOver);
+      const needsCapture = !locked && !input.fallbackLook;
+      this.#setLockBanner(needsCapture && this.state.playing && !this.state.paused && !this.state.gameOver);
       if (locked) this.sound.resume();
     };
 
@@ -461,7 +462,15 @@ export class Game {
   requestLock() {
     this.input.requestLock().then((ok) => {
       if (!ok) this.#setLockBanner(true);
+      else if (this.input.fallbackLook) this.#announceFallbackLook();
     });
+  }
+
+  /** Explain the lock-free mode once, so the cursor vanishing is not a surprise. */
+  #announceFallbackLook() {
+    if (this._fallbackAnnounced) return;
+    this._fallbackAnnounced = true;
+    this.hud.prompt('POINTER CAPTURE UNAVAILABLE — MOVE THE MOUSE TO AIM, [ESC] TO PAUSE');
   }
 
   pause() {

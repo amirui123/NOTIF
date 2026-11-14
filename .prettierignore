@@ -1,5 +1,5 @@
-vendor/
-node_modules/
-.work/
-dist/
+node_modules
+vendor
+dist
+_site
 package-lock.json

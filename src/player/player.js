@@ -19,6 +19,8 @@ import { WEAPONS } from '../config.js';
 import { clamp, damp, relativeBearingDeg } from '../core/math.js';
 
 const PLAYER_RADIUS = 0.42;
+/** Anything the player can step over without a jump. */
+const STEP_HEIGHT = 0.55;
 const EYE_STAND = 1.62;
 const EYE_CROUCH = 1.06;
 const WALK_SPEED = 5.0;
@@ -286,6 +288,13 @@ export class Player {
     for (let iteration = 0; iteration < 2; iteration++) {
       for (const collider of this.level.colliders) {
         if (collider.maxY < feetY + 0.5 || collider.minY > feetY + height) continue;
+        if (collider.minY >= feetY + STEP_HEIGHT) {
+          // Overhead geometry (ceiling, awning, catwalk): the player walks
+          // under it, so it must never push them sideways. It only stops a
+          // jump that would put their head through it.
+          this.#clampHead(collider, feetY, height);
+          continue;
+        }
         const closestX = clamp(this.position.x, collider.minX, collider.maxX);
         const closestZ = clamp(this.position.z, collider.minZ, collider.maxZ);
         let dx = this.position.x - closestX;
@@ -314,6 +323,23 @@ export class Player {
         }
       }
     }
+  }
+
+  /** Stop an upward move from pushing the head through a ceiling. */
+  #clampHead(collider, feetY, height) {
+    if (this.velocity.y <= 0) return;
+    const top = feetY + height;
+    if (top <= collider.minY) return;
+    if (
+      this.position.x + PLAYER_RADIUS <= collider.minX ||
+      this.position.x - PLAYER_RADIUS >= collider.maxX ||
+      this.position.z + PLAYER_RADIUS <= collider.minZ ||
+      this.position.z - PLAYER_RADIUS >= collider.maxZ
+    ) {
+      return;
+    }
+    this.position.y = Math.max(0, collider.minY - height);
+    this.velocity.y = 0;
   }
 
   #updateCamera(dt, camera, weapon) {

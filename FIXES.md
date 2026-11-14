@@ -38,6 +38,9 @@ Legend: **🔴 crash / blocker · 🟠 gameplay bug · 🟡 visual/polish · �
 | 19  | 🟠 **Settings were not persisted** — weather, quality, sensitivity and operator were lost on reload.                                                                                   | Stored in `localStorage` with a fail-safe wrapper (Safari private mode).                                                                                           |
 | 20  | 🟠 The **summary box never hid** after redeploying; the “NEW DEPLOYMENT” button was toggled with inline styles.                                                                        | `Menu.show()/hide()` own that state via the `hidden` attribute.                                                                                                    |
 
+| 20a | 🟠 **Overhead geometry shoved the player sideways.** Ceilings, awnings and catwalks were resolved with the same circle-vs-box push as walls, so walking under any roof teleported the player sideways — and because the spawn sits under a catwalk, you could not leave the start area. | Head-height colliders are split out: they clamp the jump arc (`#clampHead`) instead of pushing laterally. Regression-tested by `player.test.js` and `collision.test.js`. |
+| 20b | 🟠 **Pointer lock failed silently in embedded previews and Safari**, leaving the camera frozen and the game unplayable. | `Input` falls back to lock-free mouse look, hides the cursor, and shows a one-time explanation. |
+
 ## Visual / UX
 
 | #   | Bug                                                                                                                       | Fix                                                                                        |

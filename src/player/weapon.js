@@ -146,7 +146,7 @@ export class WeaponController {
   // ------------------------------------------------------------------ inputs
 
   tryFire() {
-    if (this.state !== STATE.IDLE || this.fireTimer > 0) return;
+    if (this.state !== STATE.IDLE || this.fireTimer > 0) return false;
     const slot = this.currentSlot;
     const spec = WEAPONS[slot.id];
 
@@ -154,7 +154,7 @@ export class WeaponController {
       this.sound.playFoley('dry');
       this.fireTimer = 0.22;
       this.onPrompt?.('MAGAZINE EMPTY — PRESS [R]');
-      return;
+      return false;
     }
 
     slot.mag--;
@@ -229,6 +229,7 @@ export class WeaponController {
       this.stateTimer = spec.boltDelay;
       this.reloadFlags = { pull: false, released: false };
     }
+    return true;
   }
 
   startReload() {

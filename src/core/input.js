@@ -22,6 +22,13 @@ export class Input {
     this.mouse = Object.create(null);
     this.locked = false;
     this.enabled = false;
+    /**
+     * Some environments (embedded iframes, sandboxed previews, older Safari)
+     * refuse requestPointerLock. In that case we fall back to "free look":
+     * mouse movement still rotates the camera because mousemove delivers
+     * movementX/Y outside pointer lock too.
+     */
+    this.fallbackLook = false;
     this.wheelAccumulator = 0;
     this._handlers = [];
     this._listeners = {
@@ -84,7 +91,14 @@ export class Input {
 
   /** Gameplay input only counts while the mission is live and captured. */
   get active() {
-    return this.enabled && this.locked;
+    return this.enabled && (this.locked || this.fallbackLook);
+  }
+
+  /** Switch to lock-free mouse look (no pointer capture available). */
+  enableFallbackLook() {
+    if (this.fallbackLook) return;
+    this.fallbackLook = true;
+    document.body.classList.add('fallback-look');
   }
 
   isDown(code) {
@@ -98,24 +112,43 @@ export class Input {
     this.wheelAccumulator = 0;
   }
 
+  /**
+   * Ask for pointer lock. Resolves true when the camera is under control —
+   * either through a real lock or the lock-free fallback.
+   */
   requestLock() {
     if (document.pointerLockElement === this.target) return Promise.resolve(true);
-    try {
-      const result = this.target.requestPointerLock?.({ unadjustedMovement: false });
-      return result?.then?.(() => true).catch?.(() => this.#fallbackLock()) ?? Promise.resolve(true);
-    } catch {
-      return this.#fallbackLock();
+    if (this.fallbackLook) return Promise.resolve(true);
+    if (!this.target.requestPointerLock) {
+      this.enableFallbackLook();
+      return Promise.resolve(true);
     }
-  }
 
-  #fallbackLock() {
     try {
-      // Older Safari returns void and throws synchronously when unsupported.
-      this.target.requestPointerLock?.();
+      const result = this.target.requestPointerLock({ unadjustedMovement: false });
+      if (result && typeof result.then === 'function') {
+        return result.then(
+          () => true,
+          () => {
+            this.enableFallbackLook();
+            return true;
+          },
+        );
+      }
+      // Legacy (void-returning) implementations: confirm on the next tick.
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          if (document.pointerLockElement === this.target) resolve(true);
+          else {
+            this.enableFallbackLook();
+            resolve(true);
+          }
+        }, 80);
+      });
     } catch {
-      /* ignore — the UI shows the click-to-capture banner instead */
+      this.enableFallbackLook();
+      return Promise.resolve(true);
     }
-    return Promise.resolve(false);
   }
 
   releaseLock() {
@@ -172,6 +205,8 @@ export class Input {
   #onMouseUp(e) {
     this.mouse[e.button] = false;
     if (!this.enabled) return;
+    // In fallback mode the game never owns the pointer, so a release outside
+    // the window must still stop automatic fire.
     this._listeners.button?.(e.button, false);
   }
 
