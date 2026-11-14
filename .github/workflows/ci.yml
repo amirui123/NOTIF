@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check vendored three.js
+        run: node scripts/vendor-three.js --check
+
       - name: Lint
         run: npm run lint
 
@@ -39,3 +42,6 @@ jobs:
 
       - name: Verify static build
         run: node scripts/build.js
+
+      - name: Validate workflows
+        run: node scripts/check-workflows.js
