@@ -37,8 +37,9 @@ export class WeaponController {
    * @param {import('../world/enemy.js').EnemyManager} deps.enemies
    * @param {import('../world/level.js').Level} deps.level
    */
-  constructor({ camera, tex, sound, fx, enemies, level }) {
+  constructor({ camera, tex, sound, fx, enemies, level, scene = null }) {
     this.camera = camera;
+    this.scene = scene;
     this.tex = tex;
     this.sound = sound;
     this.fx = fx;
@@ -63,7 +64,7 @@ export class WeaponController {
     this.recoilZ = 0;
     this.spreadExtra = 0;
     this.lightOn = false;
-    this.laserOn = true;
+    this.laserOn = false;
     this.sprintAmt = 0;
     this.swayX = 0;
     this.swayY = 0;
@@ -472,6 +473,8 @@ export class WeaponController {
     vm.flashlight.intensity = this.lightOn ? 14 : 0;
 
     // Laser sight, traced from the muzzle into the world.
+    // The beam used to keep its last geometry when hidden: switching the laser
+    // off left a stale 65 m beam and a dot stuck in world space.
     const showLaser = this.laserOn && this.state === STATE.IDLE && this.sprintAmt < 0.2;
     vm.laserLine.visible = showLaser;
     if (showLaser) {
@@ -488,9 +491,19 @@ export class WeaponController {
       positions.needsUpdate = true;
 
       vm.laserDot.visible = hits.length > 0;
-      if (hits.length) vm.laserDot.position.copy(end);
+      if (hits.length) {
+        // The dot lives in world space, not on the gun, so it must be added to
+        // the scene once and then positioned at the impact point.
+        if (!vm.laserDot.parent) this.scene?.add?.(vm.laserDot);
+        vm.laserDot.position.copy(end);
+      }
     } else {
       vm.laserDot.visible = false;
+      // Collapse the stale beam so it cannot be drawn from a previous frame.
+      const positions = vm.laserLine.geometry.attributes.position;
+      positions.setXYZ(0, 0, 0, 0);
+      positions.setXYZ(1, 0, 0, 0);
+      positions.needsUpdate = true;
     }
   }
 

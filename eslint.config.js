@@ -3,7 +3,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['vendor/**', 'node_modules/**', '.work/**', 'dist/**'],
+    ignores: ['**/.tmpcheck/**', '**/.scratch/**', 'vendor/**', 'node_modules/**', '.work/**', 'dist/**'],
   },
   js.configs.recommended,
   {
