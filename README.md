@@ -163,6 +163,34 @@ prevented from regressing.
 
 ---
 
+## Weapons
+
+Six weapons, all built procedurally from a hard-surface geometry kit — no model
+files, no textures downloaded, nothing fetched at runtime.
+
+| Weapon     | Class                          | Tri count | Draw calls |
+| ---------- | ------------------------------ | --------: | ---------: |
+| MK18 MOD-1 | suppressed carbine, 5.56       |    23,600 |          6 |
+| HK416A5    | piston carbine with ACOG, 5.56 |    21,712 |          7 |
+| MP7A2      | PDW, 4.6x30                    |    14,592 |          5 |
+| P226       | service pistol, 9x19           |    14,322 |          4 |
+| M249 SAW   | belt-fed LMG, 5.56             |    17,512 |          6 |
+| Kar98k     | bolt-action, 7.92x57           |    20,572 |      **4** |
+
+`src/world/gunkit.js` holds the primitives: chamfered boxes whose edges carry a
+real band of intermediate normals, crowned tubes with an inner bore, lathed
+profiles, bevelled extrusions, MIL-STD-1913 rail, M-LOK pockets, knurling. An
+`Assembly` merges geometry per material so a whole rifle costs a handful of
+draw calls.
+
+`src/world/guns/` holds one builder per weapon, authored at real scale against
+real dimensions (a 10.3" barrel is 0.262 m; a 30-round STANAG is 0.19 m tall; a
+Picatinny slot is on a 10.55 mm pitch).
+
+Renders: [`docs/weapons/`](docs/weapons/).
+
+---
+
 ## Deploying
 
 GitHub Pages serves the repository root (no build required). Pushing to `main` triggers
