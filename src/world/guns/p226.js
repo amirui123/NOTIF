@@ -153,19 +153,33 @@ export function buildP226() {
     4,
   );
   grip.scale(1.05, 1, 0.92);
-  a.add(grip, 'polymer', { y: -0.062, z: 0.056, rx: 0.22 });
+  // The lathe's axis runs along its local +Z, so the grip's rake is the X
+  // rotation that points +Z down-and-back. 0.22 rad left the grip almost
+  // horizontal, sticking out behind the slide like a stock: the bounding box
+  // grew to 271 mm and the magazine, placed for a vertical grip, ended up 74 mm
+  // below the grip's actual end as a separate floating block. 1.26 rad is a
+  // 18-degree rake off vertical, which is what a P226 grip is, and it lands the
+  // grip exactly where the hand sockets already expect it.
+  a.add(grip, 'polymer', { y: -0.016, z: 0.046, rx: 1.26 });
   // Checkering panels on both sides: the texture a shooter's hand finds.
+  // Both checkering panels ride on the grip, so they take its rake and sit
+  // about halfway down it.
+  // Both panels must run ALONG the grip. The old transform rotated the strip
+  // onto the X axis first (rz) and only then applied the rake, which left the
+  // 50 mm checkering sticking straight out sideways: the pistol measured 74 mm
+  // across, nearly twice a real P226 slide. Rotating the strip onto the grip
+  // axis directly is one rotation, not two, and it is the grip's own axis:
+  // Rx(2.83) maps +Y to (0, -0.952, +0.307), which is Rx(1.26) applied to +Z.
   a.addMirrored(serrations(0.0035, 0.05, 0.0016, 12, 'y'), 'polymer', {
     x: 0.0125,
-    y: -0.032,
-    z: 0.062,
-    rx: 0.22,
-    rz: Math.PI / 2,
+    y: -0.052,
+    z: 0.057,
+    rx: 2.83,
   });
   a.add(serrations(0.016, 0.05, 0.0016, 8, 'y'), 'polymer', {
-    y: -0.032,
-    z: 0.086,
-    rx: 0.22,
+    y: -0.052,
+    z: 0.069,
+    rx: 2.83,
   });
 
   /* trigger guard and trigger --------------------------------------------- */
@@ -196,9 +210,13 @@ export function buildP226() {
   a.add(rodZ(0.0035, 0.0035, 0.016, 10), 'steel', { x: 0.0, y: frameY + 0.014, z: 0.098, rz: Math.PI / 2 });
 
   /* magazine: base plate and the seam where it enters the grip ------------- */
-  a.add(box(0.024, 0.012, 0.04, 0.002, 3, 2), 'polymer', { y: -0.166, z: 0.086 });
-  a.add(box(0.027, 0.006, 0.043, 0.0018, 3, 2), 'rubber', { y: -0.175, z: 0.086 });
-  a.add(box(0.022, 0.008, 0.038, 0.0015, 2, 2), 'steel', { y: -0.158, z: 0.084 });
+  // The magazine lives inside the grip and only its floorplate shows, so it
+  // takes the same rake and sits at the grip's far end rather than 70 mm below
+  // it. Bore to magazine floor is now 122 mm, which is a real P226's 140 mm
+  // overall height once the slide is counted.
+  a.add(box(0.024, 0.012, 0.04, 0.002, 3, 2), 'polymer', { y: -0.072, z: 0.064, rx: 1.26 });
+  a.add(box(0.027, 0.006, 0.043, 0.0018, 3, 2), 'rubber', { y: -0.083, z: 0.067, rx: 1.26 });
+  a.add(box(0.022, 0.008, 0.038, 0.0015, 2, 2), 'steel', { y: -0.063, z: 0.061, rx: 1.26 });
 
   /* controls -------------------------------------------------------------- */
   // Decocker, slide stop and magazine release, all on the left as on the real
@@ -215,7 +233,7 @@ export function buildP226() {
   a.node('eject', D.slideW / 2, slideY + 0.004, 0.016);
   a.node('opticAxis', 0, D.opticAxisY, -0.02);
   a.node('bolt', 0, slideY, 0.0);
-  a.node('mag', 0, -0.062, 0.056);
+  a.node('mag', 0, -0.06, 0.058);
   a.node('laserEmitter', 0, frameY - 0.014, -0.055);
   a.node('flashlight', 0, frameY - 0.014, -0.055);
   a.node('gripRight', 0, -0.062, 0.058);
