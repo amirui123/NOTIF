@@ -1658,7 +1658,7 @@ impl Game {
             horizon,
             [0.055, 0.075, 0.125],
             [0.30, 0.33, 0.38],
-            sun_x * if sun.z < 0.0 { 1.0 } else { -6.0 },
+            sun_x * (if sun.z < 0.0 { 1.0 } else { -6.0 }),
             sun_y,
         );
 

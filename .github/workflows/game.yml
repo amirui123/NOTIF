@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   windows:
@@ -19,16 +20,42 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build release
+        id: build
         shell: pwsh
-        run: cargo build --release --manifest-path rust/Cargo.toml
+        continue-on-error: true
+        run: |
+          cargo build --release --manifest-path rust/Cargo.toml 2>&1 | Tee-Object -FilePath build.log
+          exit $LASTEXITCODE
 
-      - name: Verify the binary exists
+      - name: Publish the compiler log
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if (-not (Test-Path build.log)) { "no build.log"; exit 0 }
+          $log = Get-Content build.log -Raw
+          if (-not $log) { $log = "(empty)" }
+          if ($log.Length -gt 40000) { $log = "...(truncated)...`n" + $log.Substring($log.Length - 40000) }
+          $title = "BUILD LOG run $env:GITHUB_RUN_NUMBER"
+          $body = "Compiler output for run $env:GITHUB_RUN_NUMBER / $env:GITHUB_SHA`n`n```````n$log`n``````"
+          $num = gh issue list --repo $env:GITHUB_REPOSITORY --search "BUILD LOG in:title" --state open --json number --jq ".[0].number"
+          if ($num) {
+            gh issue edit $num --repo $env:GITHUB_REPOSITORY --title $title --body $body
+          } else {
+            gh issue create --repo $env:GITHUB_REPOSITORY --title $title --body $body
+          }
+
+      - name: Stop if the build failed
         shell: pwsh
         run: |
           if (-not (Test-Path rust/target/release/sector7.exe)) {
-            Get-ChildItem -Recurse rust/target/release/*.exe
-            throw "sector7.exe was not produced"
+            throw "sector7.exe was not produced -- see the BUILD LOG issue"
           }
+
+      - name: Report size
+        shell: pwsh
+        run: |
           Get-Item rust/target/release/sector7.exe | Select-Object Name, Length
 
       - name: Publish download
@@ -43,7 +70,7 @@ jobs:
           } else {
             gh release create game-latest $exe --repo $env:GITHUB_REPOSITORY `
               --title "SECTOR-7 (Windows x64)" `
-              --notes "Download sector7.exe and run it. Built automatically from the latest commit." `
+              --notes "Download sector7.exe and run it. Pure Rust, zero dependencies, no installation." `
               --prerelease
           }
 
