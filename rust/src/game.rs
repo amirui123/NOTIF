@@ -1477,6 +1477,7 @@ impl Game {
                     self.hurt = 1.0;
                     self.shake = (self.shake + 0.6).min(3.2);
                     au.enemy_shot(pan_of(self.pos, self.yaw, e.pos));
+                    au.hurt();
                 }
                 self.tracers.push(Tracer {
                     a: v3(e.pos.x, e.pos.y + 1.12, e.pos.z),
