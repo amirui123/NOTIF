@@ -78,3 +78,14 @@ jobs:
         with:
           name: sector7-windows
           path: rust/target/release/sector7.exe
+
+      # The log issue is only scaffolding for debugging a red build; once the
+      # build is green there is nothing left to read, so tidy it away.
+      - name: Close the build-log issue
+        if: success()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $num = gh issue list --repo $env:GITHUB_REPOSITORY --search "BUILD LOG in:title" --state open --json number --jq ".[0].number"
+          if ($num) { gh issue close $num --repo $env:GITHUB_REPOSITORY }
