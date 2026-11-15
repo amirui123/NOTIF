@@ -1,19 +1,20 @@
 [package]
 name = "sector7"
-version = "1.0.0"
+version = "2.0.0"
 edition = "2021"
-description = "SECTOR-7 - a complete first-person arena shooter"
+description = "SECTOR-7 - a first-person arena shooter in pure Rust"
 license = "MIT"
 
 [[bin]]
 name = "sector7"
 path = "src/main.rs"
 
-[dependencies]
-macroquad = "0.4"
+# No [dependencies] at all. The window, the renderer, the audio and every
+# texture in the game are written by hand against std and the Win32 API.
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"
+strip = true
