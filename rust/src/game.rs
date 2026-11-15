@@ -1832,7 +1832,7 @@ impl Game {
         } else {
             rgb(215, 228, 245)
         };
-        if self.ads < 0.55 || wpn.optic == 0 {
+        if self.ads < 0.55 || wpn.shape.optic == 0 {
             t.rect((cx as f32 - gap - len) as i32, cy - 1, len as i32, 2, cc);
             t.rect((cx as f32 + gap) as i32, cy - 1, len as i32, 2, cc);
             t.rect(cx - 1, (cy as f32 - gap - len) as i32, 2, len as i32, cc);
@@ -1889,12 +1889,18 @@ impl Game {
 
         // Weapon slots.
         let sy = h - 18 - sc * 46;
-        for i in 0..6 {
-            let x = 18 + i * (sc * 62 + 6);
+        for i in 0usize..6 {
+            let x = 18 + i as i32 * (sc * 62 + 6);
             let on = i == self.slot;
             let c = if on { rgb(255, 205, 90) } else { rgb(120, 132, 148) };
             t.rect_a(x, sy, sc * 58, sc * 12, rgb(0, 0, 0), if on { 0.75 } else { 0.40 });
-            t.text(&format!("{} {}", i + 1, self.weapons[i].name), x + sc * 2, sy + sc * 2, sc, c);
+            t.text(
+                &format!("{} {}", i + 1, self.weapons[i].name),
+                x + sc * 2,
+                sy + sc * 2,
+                sc,
+                c,
+            );
         }
 
         // Radar.

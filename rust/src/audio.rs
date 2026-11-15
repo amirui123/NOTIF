@@ -133,13 +133,16 @@ impl Audio {
         }
     }
 
+    /// Mix into a scratch buffer first: `step()` needs `&mut self`, so the
+    /// device buffer cannot be borrowed across the call.
     fn render_into(&mut self, i: usize) {
-        let d = &mut self.data[i];
+        let mut tmp = [0i16; FRAMES * 2];
         for f in 0..FRAMES {
             let (l, r) = self.step();
-            d[f * 2] = (l * 32767.0) as i16;
-            d[f * 2 + 1] = (r * 32767.0) as i16;
+            tmp[f * 2] = (l * 32767.0) as i16;
+            tmp[f * 2 + 1] = (r * 32767.0) as i16;
         }
+        self.data[i].copy_from_slice(&tmp);
     }
 
     fn step(&mut self) -> (f32, f32) {

@@ -844,6 +844,11 @@ impl Target {
         self.text(s, cx - w / 2, y, sc, c);
     }
 
+    pub fn text_shadow(&mut self, s: &str, x: i32, y: i32, sc: i32, c: u32) {
+        self.text(s, x + sc, y + sc, sc, rgb(0, 0, 0));
+        self.text(s, x, y, sc, c);
+    }
+
     pub fn text_c_shadow(&mut self, s: &str, cx: i32, y: i32, sc: i32, c: u32) {
         let w = font::text_width(s, sc);
         let x = cx - w / 2;
