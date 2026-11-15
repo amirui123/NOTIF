@@ -210,18 +210,6 @@ pub struct Tri {
     pub add: bool, // additive blend, no depth write
 }
 
-pub fn tri_flat(p: [V3; 3], n: V3, col: [f32; 3], emis: f32, add: bool) -> Tri {
-    Tri {
-        p,
-        n: [n; 3],
-        uv: [[0.0, 0.0]; 3],
-        mat: -1,
-        col,
-        emis,
-        add,
-    }
-}
-
 pub struct Light {
     /// Direction *towards* the key light, in view space.
     pub key: V3,
@@ -753,13 +741,6 @@ impl Target {
         }
     }
 
-    pub fn frame(&mut self, x: i32, y: i32, w: i32, h: i32, c: u32) {
-        self.rect(x, y, w, 1, c);
-        self.rect(x, y + h - 1, w, 1, c);
-        self.rect(x, y, 1, h, c);
-        self.rect(x + w - 1, y, 1, h, c);
-    }
-
     pub fn line(&mut self, x0: f32, y0: f32, x1: f32, y1: f32, c: u32) {
         let dx = x1 - x0;
         let dy = y1 - y0;
@@ -837,11 +818,6 @@ impl Target {
             }
             cx += (font::GLYPH_W + 1) * sc;
         }
-    }
-
-    pub fn text_c(&mut self, s: &str, cx: i32, y: i32, sc: i32, c: u32) {
-        let w = font::text_width(s, sc);
-        self.text(s, cx - w / 2, y, sc, c);
     }
 
     pub fn text_shadow(&mut self, s: &str, x: i32, y: i32, sc: i32, c: u32) {
