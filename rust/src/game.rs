@@ -1772,7 +1772,6 @@ impl Game {
         }
     }
 
-}
     /// The muzzle in view space, so the flash lands at the end of the barrel.
     fn muzzle_view(&self) -> V3 {
         let w = self.weapon();
