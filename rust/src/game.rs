@@ -851,6 +851,22 @@ fn draw_enemy(out: &mut Vec<Tri>, e: &Enemy, vm: &M4) {
     push_box(out, v3(-0.03, 1.08, -0.86), v3(0.03, 1.14, -0.52), &m, 3.0, -1, gun, 0.0);
     // A faint emissive marker so hostiles read at distance.
     push_box(out, v3(-0.05, 1.40, -0.23), v3(0.05, 1.44, -0.19), &m, 3.0, -1, [0.9, 0.2, 0.15], 0.6);
+
+    // Health pip, only once they have been hit.
+    let frac = (e.hp / e.max_hp).clamp(0.0, 1.0);
+    if frac < 0.999 {
+        push_box(out, v3(-0.42, 2.02, -0.05), v3(0.42, 2.10, 0.05), &m, 3.0, -1, [0.05, 0.05, 0.06], 0.0);
+        push_box(
+            out,
+            v3(-0.42, 2.03, -0.06),
+            v3(-0.42 + 0.84 * frac, 2.09, 0.06),
+            &m,
+            3.0,
+            -1,
+            [0.85, 0.14, 0.12],
+            0.35,
+        );
+    }
 }
 
 // --- particles and tracers --------------------------------------------------
@@ -1408,11 +1424,6 @@ impl Game {
         self.vel = self.vel.sub(self.aim().scale(w.kick * 0.35));
     }
 
-    /// Stereo position of a world point, -1 left to +1 right.
-    fn pan_of(&self, p: V3) -> f32 {
-        pan_of(self.pos, self.yaw, p)
-    }
-
     pub fn start_reload(&mut self, au: &mut crate::audio::Audio) {
         let i = self.slot;
         if self.reloading > 0.0 || self.mags[i] >= self.weapons[i].mag || self.res[i] <= 0 {
@@ -1479,21 +1490,6 @@ impl Game {
             e.pos.y = g;
         }
         self.enemies.retain(|e| !e.dead);
-    }
-
-    fn enemy_blocked(&self, p: V3) -> bool {
-        for b in &self.level {
-            if p.x + 0.34 > b.min.x
-                && p.x - 0.34 < b.max.x
-                && p.z + 0.34 > b.min.z
-                && p.z - 0.34 < b.max.z
-                && p.y + 1.7 > b.min.y
-                && p.y + 0.05 < b.max.y
-            {
-                return true;
-            }
-        }
-        false
     }
 
     fn update_waves(&mut self, dt: f32, au: &mut crate::audio::Audio) {

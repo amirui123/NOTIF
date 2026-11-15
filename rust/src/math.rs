@@ -30,10 +30,6 @@ impl V3 {
         v3(self.x * s, self.y * s, self.z * s)
     }
     #[inline(always)]
-    pub fn mulv(self, o: V3) -> V3 {
-        v3(self.x * o.x, self.y * o.y, self.z * o.z)
-    }
-    #[inline(always)]
     pub fn neg(self) -> V3 {
         v3(-self.x, -self.y, -self.z)
     }
@@ -67,18 +63,6 @@ impl V3 {
             self.scale(1.0 / l2.sqrt())
         }
     }
-    #[inline(always)]
-    pub fn lerp(self, o: V3, t: f32) -> V3 {
-        self.add(o.sub(self).scale(t))
-    }
-    #[inline(always)]
-    pub fn minv(self, o: V3) -> V3 {
-        v3(self.x.min(o.x), self.y.min(o.y), self.z.min(o.z))
-    }
-    #[inline(always)]
-    pub fn maxv(self, o: V3) -> V3 {
-        v3(self.x.max(o.x), self.y.max(o.y), self.z.max(o.z))
-    }
 }
 
 #[inline(always)]
@@ -101,17 +85,6 @@ pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
 #[derive(Clone, Copy)]
 pub struct M4 {
     pub m: [[f32; 4]; 4],
-}
-
-pub fn m4_id() -> M4 {
-    M4 {
-        m: [
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ],
-    }
 }
 
 pub fn m4_mul(a: &M4, b: &M4) -> M4 {
@@ -200,7 +173,6 @@ pub struct Proj {
     pub c: f32,
     pub d: f32,
     pub near: f32,
-    pub far: f32,
 }
 
 pub fn proj_new(fovy: f32, aspect: f32, near: f32, far: f32) -> Proj {
@@ -211,7 +183,6 @@ pub fn proj_new(fovy: f32, aspect: f32, near: f32, far: f32) -> Proj {
         c: (far + near) / (near - far),
         d: 2.0 * far * near / (near - far),
         near,
-        far,
     }
 }
 
