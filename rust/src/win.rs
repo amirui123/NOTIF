@@ -4,7 +4,10 @@
 //! below is imported straight from the system DLLs. That is what keeps the
 //! final executable free of third-party code.
 
+// This is an API surface, not all of which the game uses; unused
+// constants and imports are expected here.
 #![allow(non_snake_case)]
+#![allow(dead_code)]
 
 use core::ffi::c_void;
 use core::mem;

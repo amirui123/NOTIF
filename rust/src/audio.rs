@@ -93,7 +93,7 @@ impl Audio {
                 &mut hwo,
                 WAVE_MAPPER,
                 &fmt,
-                wave_cb as usize,
+                wave_cb as *const () as usize,
                 0,
                 CALLBACK_FUNCTION,
             );

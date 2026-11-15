@@ -83,7 +83,7 @@ fn main() {
         // --- keyboard -------------------------------------------------------
         inp.p.copy_from_slice(&inp.d);
         for i in 0..K_COUNT {
-            inp.d[i] = unsafe { GetAsyncKeyState(keys.vk[i]) & 0x8000 != 0 };
+            inp.d[i] = unsafe { (GetAsyncKeyState(keys.vk[i]) as u16 & 0x8000) != 0 };
         }
 
         // --- mouse ----------------------------------------------------------
@@ -100,9 +100,9 @@ fn main() {
             }
         }
         let prev1 = inp.m1;
-        inp.m1 = unsafe { GetAsyncKeyState(VK_LBUTTON) & 0x8000 != 0 };
+        inp.m1 = unsafe { (GetAsyncKeyState(VK_LBUTTON) as u16 & 0x8000) != 0 };
         inp.m1p = inp.m1 && !prev1;
-        inp.m2 = unsafe { GetAsyncKeyState(VK_RBUTTON) & 0x8000 != 0 };
+        inp.m2 = unsafe { (GetAsyncKeyState(VK_RBUTTON) as u16 & 0x8000) != 0 };
 
         if grabbed {
             let cx = win.w / 2;
