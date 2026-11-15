@@ -141,7 +141,7 @@ fn tex_crate(seed: u64) -> Tex {
             if gap {
                 v *= 0.45;
             }
-            if x < 3 || x > TS as i32 - 4 || y < 3 || y > TS as i32 - 4 {
+            if x < 3 || x > TS - 4 || y < 3 || y > TS - 4 {
                 v *= 0.68;
             }
             d[i] = pack(v * 1.15, v * 0.92, v * 0.60);
@@ -698,9 +698,9 @@ impl Target {
         let ia = a.min(1.0);
         let o = (y * self.w + x) as usize;
         let p = self.buf[o];
-        let r = lerp((p >> 16) as f32 & 255.0, (c >> 16) as f32 & 255.0, ia) as u32;
-        let g = lerp((p >> 8) as f32 & 255.0, (c >> 8) as f32 & 255.0, ia) as u32;
-        let b = lerp(p as f32 & 255.0, c as f32 & 255.0, ia) as u32;
+        let r = lerp(((p >> 16) & 255) as f32, ((c >> 16) & 255) as f32, ia) as u32;
+        let g = lerp(((p >> 8) & 255) as f32, ((c >> 8) & 255) as f32, ia) as u32;
+        let b = lerp((p & 255) as f32, (c & 255) as f32, ia) as u32;
         self.buf[o] = rgb(r, g, b);
     }
 
@@ -737,17 +737,17 @@ impl Target {
         let y1 = (y + h).min(self.h);
         let ia = a.clamp(0.0, 1.0);
         let (cr, cg, cb) = (
-            (c >> 16) as f32 & 255.0,
-            (c >> 8) as f32 & 255.0,
-            c as f32 & 255.0,
+            ((c >> 16) & 255) as f32,
+            ((c >> 8) & 255) as f32,
+            (c & 255) as f32,
         );
         for yy in y0..y1 {
             for xx in x0..x1 {
                 let o = (yy * self.w + xx) as usize;
                 let p = self.buf[o];
-                let r = lerp((p >> 16) as f32 & 255.0, cr, ia) as u32;
-                let g = lerp((p >> 8) as f32 & 255.0, cg, ia) as u32;
-                let b = lerp(p as f32 & 255.0, cb, ia) as u32;
+                let r = lerp(((p >> 16) & 255) as f32, cr, ia) as u32;
+                let g = lerp(((p >> 8) & 255) as f32, cg, ia) as u32;
+                let b = lerp((p & 255) as f32, cb, ia) as u32;
                 self.buf[o] = rgb(r, g, b);
             }
         }
@@ -880,14 +880,14 @@ impl Target {
         }
         let ia = a.min(1.0);
         let (cr, cg, cb) = (
-            (c >> 16) as f32 & 255.0,
-            (c >> 8) as f32 & 255.0,
-            c as f32 & 255.0,
+            ((c >> 16) & 255) as f32,
+            ((c >> 8) & 255) as f32,
+            (c & 255) as f32,
         );
         for p in self.buf.iter_mut() {
-            let r = lerp((*p >> 16) as f32 & 255.0, cr, ia) as u32;
-            let g = lerp((*p >> 8) as f32 & 255.0, cg, ia) as u32;
-            let b = lerp(*p as f32 & 255.0, cb, ia) as u32;
+            let r = lerp(((*p >> 16) & 255) as f32, cr, ia) as u32;
+            let g = lerp(((*p >> 8) & 255) as f32, cg, ia) as u32;
+            let b = lerp((*p & 255) as f32, cb, ia) as u32;
             *p = rgb(r, g, b);
         }
     }
